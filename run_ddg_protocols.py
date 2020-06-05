@@ -511,7 +511,7 @@ def get_reslist(reslistfile):
     with open(reslistfile, "r") as f:
         reslist = []
         for line in f:
-            if not re.match(r"\s*\r?\n", line):
+            if not re.match(r"^\s*$", line):
                 # ignore empty lines
                 res = line.rstrip("\n")
                 reslist.append(res)
@@ -539,7 +539,7 @@ def get_mutlist_cartddg(listfile, reslist = None):
     with open(listfile, "r") as f:
         rawlist = []
         for line in f:
-            if not re.match(r"\s*\r?\n", line):
+            if not re.match(r"^\s*$", line):
                 # ignore empty lines
                 items = tuple(line.rstrip("\n").split(","))
                 rawlist.append(items)
@@ -585,7 +585,7 @@ def get_mutlist_flexddg(listfile, reslist = None):
     with open(listfile, "r") as f:
         rawlist = []
         for line in f:
-            if not re.match(r"\s*\r?\n", line):
+            if not re.match(r"^\s*$", line):
                 # ignore empty lines
                 muts, chaintomove = line.rstrip("\n").split(" ")
                 muts = muts.split(",")
@@ -632,7 +632,7 @@ def get_ncaa(ncaalistfile):
     """
     with open(ncaalistfile, "r") as f:
         for line in f:
-            if not re.match(r"\s*\r?\n", line):
+            if not re.match(r"^\s*$", line):
                 # ignore empty line
                 # all NCAA should be on one line, whitespace-
                 # separated
