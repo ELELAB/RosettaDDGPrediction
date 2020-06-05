@@ -26,7 +26,7 @@ We will try to keep the script up-to-date with respect to changes in Rosetta, ad
 
 **Important: none of the protcols implemented so far has been benchmarked for post-translational modifications or non-canonical residues, therefore the reliability of the results must be taken with a grain of salt.**
 
-Unfortunately, all protocols included in the script so far are not capable of handling mutations to some post-traslationally modified residues (such as phosphorylated ones) because of design choices in the Rosetta suite itself that consider them *variants* of the canonical amino acids instead of proper non-canonical residues. 
+Unfortunately, all protocols included in the script so far are not capable of handling mutations to some post-traslationally modified residues (such as phosphorylated ones) because of design choices in the Rosetta suite itself that considers them *variants* of the canonical amino acids instead of proper non-canonical residues. 
 
 However, all protocols implemented so far are able to handle mutations to non-canonical residues, such as D-amino acids. See the "Options" section below for more details on how to work with them. 
 
@@ -55,6 +55,8 @@ For this reason, our script separates the run of the first step from the run of 
 We incorporated two protocols for the prediction of the ΔΔG of binding of a protein complex upon mutation, named `flexddg_ref2015` and `flexddg_talaris2014`, both coming from the work of Barlow et al. [^barlow2018]. They differ in the Rosetta energy function used for the calculations.
 
 These two protocols make use of a XML script implementing the procedure devised by Barlow et al. (`Flex_ddG.xml`).
+
+Both protocols consist in only one step, therefore there is no need to specify a `step` option when running them (see the "Options" section below).
 
 ## Installation
 
