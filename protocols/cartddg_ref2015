@@ -1,0 +1,13 @@
+# input options
+-in:ignore_unrecognized_res true
+-in:file:fullatom true
+
+# ddg options
+-ddg:cartesian true
+-ddg:iterations 3
+-ddg:bbnbrs 1
+-ddg:dump_pdbs true
+
+# scoring function options
+-score:fa_max_dis 9.0
+-score:weights ref2015_cart
