@@ -1,7 +1,0 @@
-# input options
--in:ignore_unrecognized_res true
--in:file:fullatom true
-
-# packing options
--packing:ex1 true
--packing:ex2 true
