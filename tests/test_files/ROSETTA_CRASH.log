@@ -1,0 +1,43 @@
+##############################################################################################################
+#
+# Rosetta crash log. 
+#
+
+[START_CRASH_REPORT]
+[ROSETTA_VERSION]: 2019.35+release.767c1ea
+[COMMIT_DATE]: 2019-08-30T10:52:08.483471
+[APPLICATION]: /usr/local/rosetta_3.11/main/source/bin/cartesian_ddg.mpi.linuxgccrelease
+[MODE]: Release
+[EXTRAS]: mpi (OpenMPI 2.1.1) 
+[OS]: GNU/Linux
+[COMPILER]: GCC version "7.4.0"
+[STDLIB]: libstdc++ version 20181206
+[START_OPTIONS]
+ -in:file:s=stability_relaxed.pdb -score:weights=ref2015_cart -packing:packer_palette:extra_base_type_file=ncaalistfile.txt -ddg:mut_file=mutation.mutfile -ddg:dump_pdbs
+
+[END_OPTIONS]
+
+[START_BACKTRACE]: RAW_LIBC
+/usr/local/rosetta_3.11/main/source/build/src/release/linux/4.15/64/x86/gcc/7/mpi/libcore.5.so(backtrace_string[abi:cxx11](int)+0x56) [0x7f89c5ebc8e6]
+/usr/local/rosetta_3.11/main/source/build/src/release/linux/4.15/64/x86/gcc/7/mpi/libutility.so(utility::excn::Exception::Exception(char const*, int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)+0xe3) [0x7f89c1144173]
+/usr/local/rosetta_3.11/main/source/build/src/release/linux/4.15/64/x86/gcc/7/mpi/libutility.so(utility::UtilityExitException::UtilityExitException(char const*, int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&)+0x10f) [0x7f89c11f579f]
+/usr/local/rosetta_3.11/main/source/build/src/release/linux/4.15/64/x86/gcc/7/mpi/libutility.so(utility::exit(char const*, int, std::__cxx11::basic_string<char, std::char_traits<char>, std::allocator<char> > const&, int)+0x36) [0x7f89c11f5556]
+/usr/local/rosetta_3.11/main/source/build/src/release/linux/4.15/64/x86/gcc/7/mpi/libprotocols_b.6.so(core::conformation::Conformation::residue(unsigned long) const+0xff) [0x7f89c94dd2bf]
+/usr/local/rosetta_3.11/main/source/bin/cartesian_ddg.mpi.linuxgccrelease(+0x1d095) [0x55a47fe01095]
+/usr/local/rosetta_3.11/main/source/bin/cartesian_ddg.mpi.linuxgccrelease(+0x1860c) [0x55a47fdfc60c]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xe7) [0x7f89bf825b97]
+/usr/local/rosetta_3.11/main/source/bin/cartesian_ddg.mpi.linuxgccrelease(+0x1c70a) [0x55a47fe0070a]
+
+[END_BACKTRACE]
+
+[FILE]: src/core/conformation/Conformation.hh
+[LINE]: 507
+[START_MESSAGE]
+[ ERROR ] UtilityExitException
+ERROR: Error in core::conformation::Conformation::residue(): The sequence position requested was 0.  Pose numbering starts at 1.
+
+
+
+[END_MESSAGE]
+[END_CRASH_REPORT]
+
