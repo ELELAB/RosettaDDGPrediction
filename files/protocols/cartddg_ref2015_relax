@@ -1,0 +1,24 @@
+# input options
+-in:ignore_unrecognized_res true
+-in:file:fullatom true
+
+# output options
+-out:nstruct 20
+
+# run options
+-run:ignore_zero_occupancy false
+-run:checkpoint true
+
+# packing options
+-packing:use_input_sc true
+
+# relax options
+-relax:constrain_relax_to_start_coords true
+-relax:coord_constrain_sidechains true
+-relax:min_type lbfgs_armijo_nonmonotone
+-relax:cartesian true
+-relax:script MonomerRelax2019
+-relax:default_repeats 5
+
+# scoring function options
+-score:weights ref2015_cart
