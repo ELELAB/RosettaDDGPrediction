@@ -1,0 +1,151 @@
+# Configuration file needed to run the `flexddg` protocol with
+# the ref2015 scoring function.
+#
+# The protocol was originally developed by Kortemme Lab [barlow2018]_
+# and a slightly modified version of the original XML file containing
+# the core of the protocol is available in the RosettaDDGProtocols
+# package under `rosetta_scripts/Flex_ddG.xml`.
+#
+# .. [barlow2018] Barlow, Kyle A., et al. "Flex ddG: Rosetta 
+#                 ensemble-based estimation of changes in 
+#                 protein–protein binding affinity upon mutation." 
+#                 The Journal of Physical Chemistry B 122.21
+#                 (2018): 5389-5399.
+
+
+# version of the configuration file
+version: 1
+
+
+#--------------------- GENERAL PROTOCOL OPTIONS ----------------------#
+
+
+# family the protocol belongs to
+family: flexddg
+
+
+#------------------------ PDB-RELATED OPTIONS ------------------------#
+
+
+pdb:
+  # whether PDB files containing multiple chains are allowed
+  # (true for flexddg protocols since they are used to predict
+  # the ΔΔG of binding)
+  allow_multi_chains: true
+  # whether PDB files with chain IDs missing are allowed
+  # (false for flexddg protocols since chain IDs are needed to
+  # discriminate between chains)
+  allow_no_chain_ids: false
+
+
+#--------------------- MUTATIONS-RELATED OPTIONS ---------------------#
+
+
+# options regarding how mutations are defined in the mutations list
+# file
+mutations:
+  # which kind of residue numbering is used in defining mutations
+  # ("pdb" for flexddg protocols since the 'resfile' format used
+  # by them requires residue numbering to be consistent with the
+  # input PDB numbering)
+  resnumbering: "pdb"
+  # extra data associated with each mutation. For flexddg protocols,
+  # the "_chaintomove_" attribute is defined to identify what chain(s)
+  # will be moved away from the interface when computing the free
+  # energy of the single chains.
+  extra: !!seq ["_chaintomove_"]
+  # number of structures to be generated for each mutation
+  nstruct: 3
+
+# options regarding saturation mutagenesis scans
+saturation:
+  # file mapping the names of the directories that will contain
+  # data for the mutations to the mutations themselves as specified
+  # in the mutations' list file
+  d2mfile: dirnames2mutations.txt
+
+
+#--------------------------- PROTOCOL STEPS --------------------------#
+
+
+steps:
+  
+  # flexddg protocols consist in only one step
+  flexddg:
+    # name of the working directory where the step will be run
+    wd: "flexddg"
+    # name of the flag file(s) that will be written and used
+    # to run the step
+    flagsfile: "flags.txt"
+    # name of the Rosetta output file(s) that will be written
+    output: "flexddg.out"
+    # Rosetta options to be used in conjunction with the Rosetta
+    # executable
+    options:
+      
+      #------------------------ Input options ------------------------#
+      
+      # whether to ignore unrecognized residues found in the PDB
+      -in:ignore_unrecognized_res: True
+      # whether the PDB file will be read as a full-atom structure
+      # as opposed to coarse-grained (should not be changed)
+      -in:file:fullatom: True
+
+      #------------------- Tracing/logging options -------------------#
+
+      # logging level. 300 is INFO level.
+      -out:level: 300
+      # whether to add tracer channel name to the output
+      -out:chname: True
+      # whether to add a timestamp to tracer channel name
+      -out:chtimestamp: True
+      # save modelling times for each model in seconds
+      -out:save_times: True
+
+      #------------------------- Run options -------------------------#
+
+      # whether to turn on/off checkpointing
+      -run:checkpoint: True
+      # whether to write out detailed version info, if it was 
+      # available at compile time
+      -run:version: true
+
+      #----------------------- Packing options -----------------------#
+
+      # number of neighbors a residue must have before extra 
+      # rotamers are used (Rosetta default is 18)
+      -packing:extrachi_cutoff: 18
+      # use extra chi1 sub-rotamers for all residues that pass the
+      # extrachi_cutoff
+      -packing:ex1: True
+      # use extra chi2 sub-rotamers for all residues that pass the 
+      # extrachi_cutoff
+      -packing:ex2: True
+      # file containing extra residue types to be included in the
+      # packing palette
+      -packing:packer_palette:extra_base_type_file: !!null
+
+      #------------------- RosettaScripts options --------------------#
+
+      # protocol XML file
+      -parser:protocol: "Flex_ddG.xml"
+      # variable substitutions for the XML parser, in the form
+      # of name=value
+      -parser:script_vars:
+        # chain that will be moved away from the interface when 
+        # computing the free energy of the single chains
+        # It is defined in the mutations list file for each mutation
+        # and substituted to the _chaintomove_ placeholder in the
+        # flagfile written for each mutation.
+        chaintomove: "_chaintomove_"
+        # name of the resfile that will be written for each mutation
+        resfile: "mutation.resfile"
+        # output database files
+        ddgdbfile: "ddg.db3"
+        structdbfile: "struct.db3"
+        # number of backrub trials
+        backrubntrials: 35000
+        # backrub trajectory stride
+        backrubtrajstride: 7000
+        # score function name
+        scfname: "ref2015"

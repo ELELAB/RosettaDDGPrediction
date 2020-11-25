@@ -3,10 +3,10 @@
   <SCOREFXNS>
 
     # define the unconstrained score function and set its weights
-    <ScoreFunction name="sf" weights="%%sfweights%%"/>
+    <ScoreFunction name="sf" weights="%%scfname%%"/>
 
     # define the constraned score function and set its weights
-    <ScoreFunction name="sf_cst" weights="%%sfweights%%">
+    <ScoreFunction name="sf_cst" weights="%%scfname%%">
 
       # set the weight of the atom-atom constraints in the scoring function
       <Reweight scoretype="atom_pair_constraint" weight="1.0"/>
@@ -61,7 +61,7 @@
     # use the multi-cool annealer for simulated annealing, set to keep a history of the 6 best rotameric states visited
     <UseMultiCoolAnnealer name="multicool" states="6"/>
 
-    # move only toward a lower cutoff for a number of neighbors withing 10 A qualifying to be considered buried
+    # move only toward a lower cutoff for a number of neighbors within 10 A qualifying to be considered buried
     <ExtraChiCutoff name="extrachizero" extrachi_cutoff="0"/>
 
     # reads command line options
@@ -95,7 +95,7 @@
     <PackRotamersMover name="repack" scorefxn="sf" task_operations="commandline_init,repackonly,norepack,multicool"/>
     <PackRotamersMover name="mutate" scorefxn="sf" task_operations="commandline_init,res_mutate,norepack,multicool"/>
 
-    # report info to a database file
+    # report energy scores info to a database file
     <ReportToDB name="dbreport" batch_description="interface_ddG" database_name="%%ddgdbfile%%">
       <ScoreTypeFeatures/>
       <ScoreFunctionFeatures scorefxn="sf"/>
@@ -163,7 +163,7 @@
     </ParsedProtocol>
 
     # generation of a backrub trajectory
-    <BackrubProtocol name="backrub" mc_kt="1.2" ntrials="350000" pivot_residue_selector="restore_neighbor_shell" task_operations="restrict_to_repacking,commandline_init,extrachizero" recover_low="0" trajectory_stride="7000" trajectory_apply_mover="finish_ddg_post_backrub"/>
+    <BackrubProtocol name="backrub" mc_kt="1.2" ntrials="%%backrubntrials%%" pivot_residue_selector="restore_neighbor_shell" task_operations="restrict_to_repacking,commandline_init,extrachizero" recover_low="0" trajectory_stride="%%backrubtrajstride%%" trajectory_apply_mover="finish_ddg_post_backrub"/>
 
   </MOVERS>
   <APPLY_TO_POSE>

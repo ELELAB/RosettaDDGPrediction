@@ -1,0 +1,30 @@
+# Default settings used in rosetta_ddg_run to set up parallel runs, 
+# set the logging level and the default path where to look for Rosetta
+# executables.
+
+
+################################# RUN #################################
+
+mpi:
+  # whether to use MPI
+  usempi: False
+  # MPI executable
+  mpiexec: !!null
+  # MPI arguments
+  mpiargs: !!null
+
+localcluster:
+  # level of log silencing (log messages of lower levels will
+  # be suppressed)
+  silence_logs: "WARNING"
+  # whether to use processes, single-core or threads
+  processes: True
+  # how many threads for each worker
+  threads_per_worker: 1
+
+
+############################### ROSETTA ###############################
+
+rosetta:
+  # usual Rosetta path for executables
+  execpath: "main/source/bin"
