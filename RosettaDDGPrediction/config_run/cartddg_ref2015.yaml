@@ -1,0 +1,228 @@
+# Configuration file needed to run the `cartddg` protocol with
+# the ref2015_cart scoring function.
+
+# version of the configuration file
+version: 1
+
+
+#--------------------- GENERAL PROTOCOL OPTIONS ----------------------#
+
+
+# family the protocol belongs to
+family: cartddg
+
+
+#------------------------ PDB-RELATED OPTIONS ------------------------#
+
+
+pdb:
+  # whether PDB files containing multiple chains are allowed
+  # (false for cartddg protocols since they are used to predict
+  # the ΔΔG of stability of monomeric proteins)
+  allow_multi_chains: false
+  # whether PDB files with chain IDs missing are allowed
+  # (true for cartddg protocols since chain IDs are not necessary,
+  # because they only deal with monomeric proteins)
+  allow_no_chain_ids: true
+
+
+#--------------------- MUTATIONS-RELATED OPTIONS ---------------------#
+
+
+# options regarding how mutations are defined in the mutations list
+# file
+mutations:
+  # which kind of residue numbering is used in defining mutations
+  # ("pose" for cartddg protocols since the 'mutfile' format used
+  # by them requires residue numbering to be consistent with the
+  # Rosetta pose numbering)
+  resnumbering: pose
+  # extra data associated with each mutation. For cartddg protocols,
+  # there are no extra data.
+  extra: !!null
+  # number of structures to be generated for each mutation. It is
+  # set to null for cartddg protocols since they do generate 
+  # multiple structures but the option must be given as a
+  # Rosetta option (see -ddg:iterations below).
+  nstruct: !!null
+
+# options regarding saturation mutagenesis scans
+saturation:
+  # file mapping the names of the directories that will contain
+  # data for the mutations to the mutations themselves as specified
+  # in the mutations' list file
+  d2mfile: dirnames2mutations.txt
+
+
+#--------------------------- PROTOCOL STEPS --------------------------#
+
+
+steps:
+  # first step of the cartddg protocol
+  relax:
+    # name of the working directory where the step will be run
+    wd: relax
+    # name of the flag file(s) that will be written and used
+    # to run the step
+    flagsfile: flags.txt
+    # name of the Rosetta output file(s) that will be written
+    output: relax.out
+    # Rosetta options to be used in conjunction with the Rosetta
+    # executable
+    options:
+      
+      #------------------------ Input options ------------------------#
+      
+      # whether to ignore unrecognized residues found in the PDB
+      -in:ignore_unrecognized_res: True
+      # whether the PDB file will be read as a full-atom structure
+      # as opposed to coarse-grained (should not be changed)
+      -in:file:fullatom: True
+
+      #----------------------- Output options ------------------------#
+      
+      # number of output structures
+      -out:nstruct: 2
+      # prefix for output structures' names
+      -out:prefix: relax_
+      # file containing the scores (will be written in the
+      # directory where the step if run if no path is specified)
+      -out:file:scorefile: scorefile.sc
+      # score file format (should not be changed since for now
+      # only text score files are parsed correctly. Rosetta default
+      # is text.)
+      -out:file:scorefile_format: text
+      
+      #------------------- Tracing/logging options -------------------#
+
+      # logging level. 300 is INFO level.
+      -out:level: 300
+      # whether to add tracer channel name to the output
+      -out:chname: True
+      # whether to add a timestamp to tracer channel name
+      -out:chtimestamp: True
+      # save modelling times for each model in seconds
+      -out:save_times: True
+
+      #------------------------- Run options -------------------------#
+      
+      # idiscard coordinate information for missing density atoms
+      -run:ignore_zero_occupancy: false
+      # whether to turn on/off checkpointing
+      -run:checkpoint: True
+      # whether to write out detailed version info, if it was 
+      # available at compile time
+      -run:version: true
+
+      #----------------------- Packing options -----------------------#
+      
+      # use rotamers from input structure in packing 
+      -packing:use_input_sc: true
+      # file containing extra residue types to be included in the
+      # packing palette
+      -packing:packer_palette:extra_base_type_file: !!null
+
+      #------------------------ Relax options ------------------------#
+      
+      # tether backbone coordinates of the relaxed structures to the
+      # coordinates in the initial structure
+      -relax:constrain_relax_to_start_coords: true
+      # tether sidechain heavy atom coordinates
+      -relax:coord_constrain_sidechains: true
+      # type of minimizer to be used
+      -relax:min_type: lbfgs_armijo_nonmonotone
+      # whether to use the Cartesian minimizer
+      -relax:cartesian: true
+      # relax script to be used
+      -relax:script: MonomerRelax2019
+      # scoring function options
+      -score:weights: ref2015_cart
+
+  # second step of the cartddg protocol
+  structure_selection:
+    # structure selection options
+    options:
+      # input file type (a Rosetta scorefile containing scores
+      # for a pool of structures)
+      infiletype: scorefile_text
+      # input file (output scorefile from the 'relax' step)
+      infile: relax/scorefile.sc
+      # selection criterion for the structure:
+      # - random: randomly draw a structure
+      # - lowest: select the structure with lowest energy
+      # - highest: select the structure with highest energy
+      # - closest_to_mean: select the structure whose energy
+      #                    is closest to the mean energy of
+      #                    the pool of structures
+      # - median: select the structure having median energy
+      # - first: select the structure computed first
+      # - last: select the structure computed last
+      select: lowest
+
+  # third step of the cartddg protocol
+  cartesian:
+    # name of the working directory where the step will be run
+    wd: cartesian
+    # name of the flag file(s) that will be written and used
+    # to run the step
+    flagfile: flags.txt
+    # name of the Rosetta output file(s) that will be written
+    output: cartesian.out
+    # Rosetta options to be used in conjunction with the Rosetta
+    # executable  
+    options:
+
+      #------------------------ Input options ------------------------#
+      
+      # whether to ignore unrecognized residues found in the PDB
+      -in:ignore_unrecognized_res: True
+      # whether the PDB file will be read as a full-atom structure
+      # as opposed to coarse-grained (should not be changed)
+      -in:file:fullatom: True
+
+      #------------------- Tracing/logging options -------------------#
+
+      # logging level. 300 is INFO level.
+      -out:level: 300
+      # whether to add tracer channel name to the output
+      -out:chname: True
+      # whether to add a timestamp to tracer channel name
+      -out:chtimestamp: True
+      # save modelling times for each model in seconds
+      -out:save_times: True
+
+      #------------------------- Run options -------------------------#
+
+      # whether to turn on/off checkpointing
+      -run:checkpoint: True
+      # whether to write out detailed version info, if it was 
+      # available at compile time
+      -run:version: true
+
+      #----------------------- Packing options -----------------------#
+
+      # file containing extra residue types to be included in the
+      # packing palette
+      -packing:packer_palette:extra_base_type_file: !!null
+
+      #------------------------- DDG options -------------------------#
+
+      # whether to toggle on Cartesian mode
+      -ddg:cartesian: true
+      # number of iterations of refinement
+      -ddg:iterations: 3
+      # how many (sequence) neighbors should be included in the 
+      # backbone minimization (Rosetta default is 1)
+      -ddg:bbnbrs: 1
+      # whether or not to dump repacked wild-type and mutant pdbs
+      -ddg:dump_pdbs: true
+      # name of the mutfile specifying the mutation
+      -ddg:mut_file: mutation.mutfile
+      # output file of predicted ΔΔGs
+      -ddg:out: mutation.ddg
+
+      #------------------ Scoring function options -------------------#
+
+      # scoring function options
+      -score:fa_max_dis: 9.0
+      -score:weights: ref2015_cart
