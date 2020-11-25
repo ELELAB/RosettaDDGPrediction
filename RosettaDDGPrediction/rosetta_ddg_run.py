@@ -121,15 +121,6 @@ def main():
                              default = None, \
                              help = l_help)
 
-    nc_help = \
-        "File containing the list of non-canonical residue types " \
-        "(full names) if you want to specify mutations to " \
-        "non-canonical residues."
-    generalargs.add_argument("-nc", "--ncaafile", \
-                             type = str, \
-                             default = None, \
-                             help = nc_help)
-
     n_help = \
         "Number of processes to be started in parallel. " \
         "Default is one process (no parallelization)."
@@ -164,7 +155,6 @@ def main():
     rosettapath = util.get_abspath(args.rosettapath)
     rundir = util.get_abspath(args.rundir)
     listfile = util.get_abspath(args.listfile)
-    ncaafile = util.get_abspath(args.ncaafile)
     reslistfile = util.get_abspath(args.reslistfile)
     # configuration files
     configfilerun = args.configfile_run
