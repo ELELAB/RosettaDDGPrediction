@@ -1,5 +1,5 @@
-# Configuration file needed to run the `cartddg` protocol with
-# the `ref2015_cart` scoring function.
+# Configuration file needed to run the `cartesian` step of the 
+# `cartddg` protocol with the `talaris2014_cart` scoring function.
 
 
 # version of the configuration file
@@ -60,111 +60,6 @@ saturation:
 
 
 steps:
-  # first step of the cartddg protocol
-  relax:
-    # name of the working directory where the step will be run
-    wd: relax
-    # name of the flags file(s) that will be written and used
-    # to run the step
-    flagsfile: flags.txt
-    # name of the Rosetta log file(s) that will be written
-    output: relax.out
-    # Rosetta options to be used in conjunction with the Rosetta
-    # executable
-    options:
-      
-      #------------------------ Input options ------------------------#
-      
-      # whether to ignore unrecognized residues found in the PDB
-      -in:ignore_unrecognized_res: True
-      # whether the PDB file will be read as a full-atom structure
-      # as opposed to coarse-grained (should not be changed)
-      -in:file:fullatom: True
-
-      #----------------------- Output options ------------------------#
-      
-      # number of output structures
-      -out:nstruct: 20
-      # prefix for output structures' names
-      -out:prefix: relax_
-      # file containing the scores (will be written in the
-      # directory where the step is run if no path is specified)
-      -out:file:scorefile: scorefile.sc
-      # score file format (should not be changed since for now
-      # only text score files are parsed correctly. Rosetta default
-      # is 'text'.)
-      -out:file:scorefile_format: text
-      
-      #------------------- Tracing/logging options -------------------#
-
-      # logging level. 300 is INFO level.
-      -out:level: 300
-      # whether to add the tracer channel name to the output
-      -out:chname: True
-      # whether to add a timestamp to the tracer channel name
-      -out:chtimestamp: True
-      # whether to save modelling times for each model in seconds
-      -out:save_times: True
-
-      #------------------------- Run options -------------------------#
-      
-      # discard coordinate information for missing density atoms
-      -run:ignore_zero_occupancy: false
-      # whether to use checkpointing
-      -run:checkpoint: True
-      # whether to write out detailed version info, if it was 
-      # available at compile time
-      -run:version: true
-
-      #----------------------- Packing options -----------------------#
-      
-      # whether to use rotamers from input structure in packing 
-      -packing:use_input_sc: true
-      # file containing extra residue types to be included in the
-      # packing palette. 'null' if no file is specified (you can
-      # also comment out the option).
-      -packing:packer_palette:extra_base_type_file: !!null
-
-      #------------------------ Relax options ------------------------#
-      
-      # tether backbone coordinates of the relaxed structures to the
-      # coordinates in the initial structure
-      -relax:constrain_relax_to_start_coords: true
-      # tether sidechain heavy atom coordinates
-      -relax:coord_constrain_sidechains: true
-      # type of minimizer to be used
-      -relax:min_type: lbfgs_armijo_nonmonotone
-      # whether to use the Cartesian minimizer
-      -relax:cartesian: true
-      # relax script to be used
-      -relax:script: MonomerRelax2019
-
-      #------------------ Scoring function options -------------------#
-
-      # scoring function weights
-      -score:weights: ref2015_cart
-
-  # second step of the cartddg protocol
-  structure_selection:
-    # structure selection options
-    options:
-      # input file type (a Rosetta scorefile containing scores
-      # for a pool of structures)
-      infiletype: scorefile_text
-      # input file (output scorefile from the 'relax' step)
-      infile: relax/scorefile.sc
-      # selection criterion for the structure:
-      # - random: randomly draw a structure
-      # - lowest: select the structure with lowest energy
-      # - highest: select the structure with highest energy
-      # - closest_to_mean: select the structure whose energy
-      #                    is closest to the mean energy of
-      #                    the pool of structures
-      # - median: select the structure having median energy
-      # - first: select the structure computed first
-      # - last: select the structure computed last
-      select: lowest
-
   # third step of the cartddg protocol
   cartesian:
     # name of the working directory where the step will be run
@@ -233,4 +128,9 @@ steps:
       # how far does the FA pair potential go out to
       -score:fa_max_dis: 9.0
       # scoring function weights
-      -score:weights: ref2015_cart
+      -score:weights: talaris2014_cart
+
+      #--------------------- Corrections options ---------------------#
+
+      # use the talaris score function and residue_type_set
+      -corrections:restore_talaris_behavior: true

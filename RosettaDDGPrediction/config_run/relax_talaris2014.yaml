@@ -1,5 +1,5 @@
-# Configuration file needed to run the `cartddg` protocol with
-# the `ref2015_cart` scoring function.
+# Configuration file needed to run the `relax` step of the 
+# `cartddg` protocol with the `talaris2014_cart` scoring function.
 
 
 # version of the configuration file
@@ -142,95 +142,9 @@ steps:
       #------------------ Scoring function options -------------------#
 
       # scoring function weights
-      -score:weights: ref2015_cart
+      -score:weights: talaris2014_cart
 
-  # second step of the cartddg protocol
-  structure_selection:
-    # structure selection options
-    options:
-      # input file type (a Rosetta scorefile containing scores
-      # for a pool of structures)
-      infiletype: scorefile_text
-      # input file (output scorefile from the 'relax' step)
-      infile: relax/scorefile.sc
-      # selection criterion for the structure:
-      # - random: randomly draw a structure
-      # - lowest: select the structure with lowest energy
-      # - highest: select the structure with highest energy
-      # - closest_to_mean: select the structure whose energy
-      #                    is closest to the mean energy of
-      #                    the pool of structures
-      # - median: select the structure having median energy
-      # - first: select the structure computed first
-      # - last: select the structure computed last
-      select: lowest
+      #--------------------- Corrections options ---------------------#
 
-  # third step of the cartddg protocol
-  cartesian:
-    # name of the working directory where the step will be run
-    wd: cartesian
-    # name of the flags file(s) that will be written and used
-    # to run the step
-    flagfile: flags.txt
-    # name of the Rosetta output file(s) that will be written
-    output: cartesian.out
-    # Rosetta options to be used in conjunction with the Rosetta
-    # executable  
-    options:
-
-      #------------------------ Input options ------------------------#
-      
-      # whether to ignore unrecognized residues found in the PDB
-      -in:ignore_unrecognized_res: True
-      # whether the PDB file will be read as a full-atom structure
-      # as opposed to coarse-grained (should not be changed)
-      -in:file:fullatom: True
-
-      #------------------- Tracing/logging options -------------------#
-
-      # logging level. 300 is INFO level.
-      -out:level: 300
-      # whether to add the tracer channel name to the output
-      -out:chname: True
-      # whether to add a timestamp to the tracer channel name
-      -out:chtimestamp: True
-      # whether to save modelling times for each model in seconds
-      -out:save_times: True
-
-      #------------------------- Run options -------------------------#
-
-      # whether to use checkpointing
-      -run:checkpoint: True
-      # whether to write out detailed version info, if it was 
-      # available at compile time
-      -run:version: true
-
-      #----------------------- Packing options -----------------------#
-
-      # file containing extra residue types to be included in the
-      # packing palette. 'null' if no file is specified (you can
-      # also comment out the option).
-      -packing:packer_palette:extra_base_type_file: !!null
-
-      #------------------------- DDG options -------------------------#
-
-      # whether to toggle on Cartesian mode
-      -ddg:cartesian: true
-      # number of iterations of refinement
-      -ddg:iterations: 3
-      # how many (sequence) neighbors should be included in the 
-      # backbone minimization (Rosetta default is 1)
-      -ddg:bbnbrs: 1
-      # whether or not to dump repacked wild-type and mutant pdbs
-      -ddg:dump_pdbs: true
-      # name of the mutfile specifying the mutation
-      -ddg:mut_file: mutation.mutfile
-      # output file of predicted ΔΔGs
-      -ddg:out: mutation.ddg
-
-      #------------------ Scoring function options -------------------#
-
-      # how far does the FA pair potential go out to
-      -score:fa_max_dis: 9.0
-      # scoring function weights
-      -score:weights: ref2015_cart
+      # use the talaris score function and residue_type_set
+      -corrections:restore_talaris_behavior: true

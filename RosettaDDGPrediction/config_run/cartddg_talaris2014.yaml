@@ -1,5 +1,5 @@
 # Configuration file needed to run the `cartddg` protocol with
-# the `ref2015_cart` scoring function.
+# the `talaris2014_cart` scoring function.
 
 
 # version of the configuration file
@@ -142,7 +142,12 @@ steps:
       #------------------ Scoring function options -------------------#
 
       # scoring function weights
-      -score:weights: ref2015_cart
+      -score:weights: talaris2014_cart
+
+      #--------------------- Corrections options ---------------------#
+
+      # use the talaris score function and residue_type_set
+      -corrections:restore_talaris_behavior: true
 
   # second step of the cartddg protocol
   structure_selection:
@@ -233,4 +238,9 @@ steps:
       # how far does the FA pair potential go out to
       -score:fa_max_dis: 9.0
       # scoring function weights
-      -score:weights: ref2015_cart
+      -score:weights: talaris2014_cart
+
+      #--------------------- Corrections options ---------------------#
+
+      # use the talaris score function and residue_type_set
+      -corrections:restore_talaris_behavior: true

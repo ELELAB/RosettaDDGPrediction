@@ -1,5 +1,5 @@
 # Configuration file needed to run the `flexddg` protocol with
-# the `ref2015` scoring function.
+# the `talaris2014` scoring function.
 #
 # The protocol was originally developed by Kortemme Lab [barlow2018]_
 # and a slightly modified version of the original XML file containing
@@ -148,4 +148,9 @@ steps:
         # backrub trajectory stride
         backrubtrajstride: 7000
         # score function name
-        scfname: "ref2015"
+        scfname: "talaris2014"
+
+      #--------------------- Corrections options ---------------------#
+
+      # use the talaris score function and residue_type_set
+      -corrections:restore_talaris_behavior: true
