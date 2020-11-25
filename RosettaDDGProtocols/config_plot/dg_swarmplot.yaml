@@ -27,20 +27,27 @@ output:
 
 # plot settings
 plot:
+  
   # plot type
   type: "dg_swarmplot"
-  # swarmplot options
+  
+  # plot options
   options:
     # swarmplot settings (passed to 'sns.swarmplot')
     swarmplot:
       dodge: False
 
-    # y-axis settings  
+    # x-axis settings  
     xaxis:
       # label settings (passed to 'matplotlib.axes.Axes.set_xlabel')
       label:
+        # text of the label
         xlabel: "Mutations"
+        # font properties
         fontproperties:
+          # name of/path to the font
+          fname: !!null
+          # font size
           size: 12
       # tick labels settings (passed to 
       # 'matplotlib.axes.Axes.set_xticklabels')  
@@ -49,9 +56,13 @@ plot:
         rotation: 90
         # tick label font properties
         fontproperties:
+          # name of/path to the font
           fname: !!null
+          # font size
           size: 8
+      # interval of values represented on the axis
       interval:
+        # interval type 
         type: discrete
       
     # y-axis settings
@@ -59,7 +70,14 @@ plot:
       # label settings 
       # (passed to 'matplotlib.axes.Axes.set_ylabel')
       label:
+        # text of the label
         ylabel: "ΔG scores (kcal/mol)"
+        # font properties
+        fontproperties:
+          # name of/path to the font
+          fname: !!null
+          # font size
+          size: 12
       # tick labels settings 
       # (passed to 'matplotlib.axes.Axes.set_yticklabels')
       ticklabels:
@@ -67,9 +85,13 @@ plot:
         rotation: 0
         # tick label font properties
         fontproperties:
+          # name of/path to the font
           fname: !!null
+          # font size
           size: 8
+      # interval of values represented on the axis
       interval:
+        # interval type
         type: continuous
 
     # legend settings (passed to 'matplotlib.pyplot.legend')
@@ -86,4 +108,7 @@ plot:
       title: "Structures"
       # font properties of the legend
       prop:
+        # name of/path to the font
+        fname: !!null
+        # font size
         size: 10

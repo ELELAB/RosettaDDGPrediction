@@ -1,7 +1,7 @@
 # Configuration file for plotting a a one-row heatmap where all 
-# mutations are displayed on the x-axis, each one corresponding 
-# to a cell color-coded according to the ΔΔG score corresponding 
-# to that mutation.
+# mutations are displayed on the x-axis, each one displayed
+# as a cell color-coded according to the total ΔΔG score
+# corresponding to that mutation.
 
 
 # version of the configuration file
@@ -23,103 +23,146 @@ output:
   bbox_inches: "tight"
 
 
-#------------------------------- HEATMAP -----------------------------#
+#--------------------------- HEATMAP OPTIONS -------------------------#
   
 
-# heatmap settings
-total_heatmap:
-    
-  # settings for the heatmap construction
-  # (passed to seaborn.heatmap)
-  heatmap:
-    heatmap:
-      # matplotlib color map
-      cmap: "BrBG_r"
-      # whether the cells should be square
-      square: True
-      # edge color of the cells
-      linecolor: "black"
-      # edge width of the cell (0 is no edge)
-      linewidths: 0
-      # String formatting code of the annotations
-      fmt: "g"
+# plot settings
+plot:
+  
+  # plot type
+  type: "total_heatmap"
 
-    # annotations settings
-    # (passed as 'annot_kws' to seaborn.heatmap)
-    annot:
-      # whether to write annotations or not
-      annot: True
-      # how many decimals to keep
-      ndecimals: 2
-      # style of the annotations
-      style:
-        # color of the annotations
-        color: "black"
+  # plot options
+  options:
+    
+    # settings for the heatmap construction
+    # (passed to seaborn.heatmap)
+    heatmap:
+      heatmap:
+        # matplotlib color map
+        cmap: "BrBG_r"
+        # whether the cells should be square
+        square: True
+        # edge color of the cells
+        linecolor: "black"
+        # edge width of the cell (0 is no edge)
+        linewidths: 0
+        # String formatting code of the annotations
+        fmt: "g"
+
+      # annotations settings
+      # (passed as 'annot_kws' to seaborn.heatmap)
+      annot:
+        # whether to write annotations or not
+        annot: True
+        # how many decimal digits to keep
+        ndecimals: 2
+        # style of the annotations
+        style:
+          # color of the annotations
+          color: "black"
+          # font properties
+          fontproperties:
+            # name of/path to the font
+            fname: !!null
+            # font size
+            size: 5
+      
+    # NaN cells settings (cells with missing data will
+    # be covered by a rectangular/square patch)
+    # (passed to matplotlib.patches.Rectangle)
+    nancells:
+      # if 'square' is True in the heatmap settings,
+      # width and height should be both set to 1,
+      # otherwise the mask will not fit the
+      # underlying heatmap
+      width: 1
+      height: 1
+      # whether to fill the patches
+      fill: False
+      # edge width of the patches (0 is no edge)
+      linewidth: 0
+      # pattern to fill the patches with
+      hatch: "////////"
+      # color of the pattern
+      color: "gray"
+   
+    # color bar settings
+    # (passed to matplotlib.colorbar)
+    colorbar:
+      colorbar:
+        # extend the colorbar past its limits at either
+        # of its edges (or both)
+        extend: "both"
+        # wheter the extensions should be rectangular
+        # (if False, they are triangular)
+        extendrect: False
+        # orientation of the color bar
+        orientation: "vertical"
+      # colorbar label
+      label:
+        # text of the label
+        ylabel: "ΔΔG scores (kcal/mol)"
         # font properties
         fontproperties:
+          # name of/path to the font
           fname: !!null
-          size: 5
-    
-  # NaN cells settings (cells with missing data will
-  # be covered by a rectangular/square patch)
-  # (passed to matplotlib.patches.Rectangle)
-  nancells:
-    # if 'square' is True in the heatmap settings,
-    # width and height should be both set to 1
-    width: 1
-    height: 1
-    # whether to fill the patches
-    fill: False
-    # edge width of the patches (0 is no edge)
-    linewidth: 0
-    # pattern to fill the patches
-    hatch: "////////"
-    # color of the pattern
-    color: "gray"
+          # font size
+          size: 10 
+      # color bar tick labels settings
+      # (passed to set_yticklabels method of Axis)
+      ticklabels:
+        # font properties
+        fontproperties:
+          # name of/path to the font
+          fname: !!null
+          # font size
+          size: 8
+      # interval of values represented on the colorbar
+      interval:
+        # interval type
+        type: "continuous"
+        # interval top
+        # top: 2.0
+        # interval steps
+        # steps: 5
+        # round top and bottom values to the nearest
+        # integer, 0.5, 0.25, etc.
+        round_to_nearest: 0.5
+        # whether the interval should be centered in zero
+        center_in_zero: True
 
-    
-  # color bar settings
-  # (passed to matplotlib.colorbar)
-  colorbar:
-    colorbar:
-      # extend the colorbar past its limits at either
-      # of its edges (or both)
-      extend: "both"
-      # wheter the extensions should be rectangular
-      # (if False, they are triangular)
-      extendrect: False
-      # orientation of the color bar
-      orientation: "vertical"
-    # colorbar label
-    label:
-      ylabel: "ΔΔG scores (kcal/mol)"
-      fontproperties:
-        fname: !!null
-        size: 10 
-    # color bar tick labels settings
-    # (passed to set_yticklabels method of Axis)
-    ticklabels:
-      fontproperties:
-        fname: !!null
-        size: 8
+    # x-axis settings
+    xaxis:
+      label:
+        xlabel: "Mutations"
+      # options for the ticks
+      tick_params:
+        # whether the options apply to major ticks,
+        # minor ticks or both
+        which: "both"
+        # length of the ticks (0 is no tick drawn)
+        length: 0
+      # tick labels settings 
+      # (passed to 'matplotlib.axes.Axes.set_xticklabels')
+      ticklabels:
+        # tick label font properties
+        fontproperties:
+          # name of/path to the font
+          fname: !!null
+          # font size
+          size: 8
 
-    # values interval settings
-    interval:
-      type: "continuous"
-      steps: 5
-      round_to_nearest: 0.5
-      center_in_zero: True
+    # y-axis settings
+    yaxis:
+      # options for the ticks
+      tick_params:
+        # whether the options apply to major ticks,
+        # minor ticks or both
+        which: "both"
+        # length of the ticks (0 is no tick drawn)
+        length: 0
 
-  # x-axis settings
-  xaxis:
-    label:
-      xlabel: "Mutations"
-    tick_params:
-      which: "both"
-      length: 0
-
-  # y-axis settings
-  yaxis:
-    tick_params:
-      which: "both"
-      length: 0
+      # no options for the axis label or tick labels
+      # since the heatmap is one-row, so there is
+      # no real y-axis shown

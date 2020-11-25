@@ -1,11 +1,11 @@
 # Configuration file for plotting a heatmap containing the total
 # ΔΔG scores for positions on which a saturation mutagenesis scan
 # was performed. 
-
+#
 # Positions will be displayed on the x-axis, while
 # residue types included in the saturation mutagenesis will be
 # displayed on the y-axis. 
-
+#
 # Cells corresponding to positions for which a mutation to a 
 # particular residue type was not performed (partial scan) will
 # be either blank or masked (aesthetics for the mask can be defined
@@ -36,8 +36,10 @@ output:
 
 # plot settings
 plot:
+  
   # plot type
   type: "total_heatmap_saturation"
+  
   # heatmap options
   options:
     # settings for the heatmap construction
@@ -52,15 +54,18 @@ plot:
         linecolor: "black"
         # edge width of the cell (0 is no edge)
         linewidths: 1
-        # String formatting code for the annotations
+        # string formatting code for the annotations
+        # on the heatmap (if present)
         fmt: "g"
 
-      # annotations settings
+      # annotations settings to write the total
+      # ΔΔG score for each mutation in the
+      # corresponding cell
       # (passed as 'annot_kws' to seaborn.heatmap)
       annot:
         # whether to write annotations or not
         annot: True
-        # how many decimals to keep
+        # how many decimal digits to keep
         ndecimals: 2
         # style of the annotations
         style:
@@ -68,7 +73,9 @@ plot:
           color: "black"
           # font properties
           fontproperties:
+            # name of/path to the font
             fname: !!null
+            # font size
             size: 5
       
     # NaN cells settings (cells with missing data will
@@ -76,19 +83,20 @@ plot:
     # (passed to matplotlib.patches.Rectangle)
     nancells:
       # if 'square' is True in the heatmap settings,
-      # width and height should be both set to 1
+      # width and height should be both set to 1,
+      # otherwise the mask will not fit the
+      # underlying heatmap
       width: 1
       height: 1
       # whether to fill the patches
       fill: False
       # edge width of the patches (0 is no edge)
       linewidth: 0
-      # pattern to fill the patches
+      # pattern to fill the patches with
       hatch: "////////"
       # color of the pattern
       color: "gray"
 
-      
     # color bar settings
     # (passed to matplotlib.colorbar)
     colorbar:
@@ -103,37 +111,95 @@ plot:
         orientation: "vertical"
       # colorbar label
       label:
+        # text of the label
         ylabel: "ΔΔG scores (kcal/mol)"
+        # font properties
         fontproperties:
+          # name of/path to the font
           fname: !!null
+          # font size
           size: 10 
       # color bar tick labels settings
       # (passed to set_yticklabels method of Axis)
       ticklabels:
+        # font properties
         fontproperties:
+          # name of/path to the font
           fname: !!null
+          # font size
           size: 8
-
-      # values interval settings
+      # interval of values represented on the colorbar
       interval:
+        # interval type
         type: "continuous"
-        top: 2.0
-        steps: 5
+        # interval top
+        # top: 2.0
+        # interval steps
+        # steps: 5
+        # round top and bottom values to the nearest
+        # integer, 0.5, 0.25, etc.
         round_to_nearest: 0.5
+        # whether the interval should be centered in zero
         center_in_zero: True
 
     # x-axis settings
     xaxis:
+      # label settings
+      # (passed to 'matplotlib.axes.Axes.set_xlabel')
       label:
+        # text of the label
         xlabel: "Positions"
+        # font properties
+        fontproperties:
+          # name of/path to the font
+          fname: !!null
+          # font size
+          size: 12
+      # options for the ticks
       tick_params:
+        # whether the options apply to major ticks,
+        # minor ticks or both
         which: "both"
+        # length of the ticks (0 is no tick drawn)
         length: 0
+      # tick labels settings 
+      # (passed to 'matplotlib.axes.Axes.set_xticklabels')
+      ticklabels:
+        # tick label font properties
+        fontproperties:
+          # name of/path to the font
+          fname: !!null
+          # font size
+          size: 8
 
     # y-axis settings
     yaxis:
+      # label settings
+      # (passed to 'matplotlib.axes.Axes.set_xlabel')
       label:
+        # text of the lavel
         ylabel: "Mutations"
+        # font properties
+        fontproperties:
+          # name of/path to the font
+          fname: !!null
+          # font size
+          size: 12
+      # options for the ticks
       tick_params:
+        # whether the options apply to major ticks,
+        # minor ticks or both
         which: "both"
+        # length of the ticks (0 is no tick drawn)
         length: 0
+      # tick labels settings 
+      # (passed to 'matplotlib.axes.Axes.set_yticklabels')
+      ticklabels:
+        # tick label rotation
+        rotation: 0
+        # tick label font properties
+        fontproperties:
+          # name of/path to the font
+          fname: !!null
+          # font size
+          size: 8

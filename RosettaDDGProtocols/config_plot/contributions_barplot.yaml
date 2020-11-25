@@ -1,6 +1,8 @@
-# Configuration file for plotting a split violin plot showing the
-# distribution of ΔG scores in pairs of corresponding wild-type and
-# mutant structures.
+# Configuration file for plotting a bar plot with stacked bars
+# representing the different energy contributions making up the
+# total ΔΔG score. Positive contributions are stacked upon the
+# y positive semiaxis while negative contributions are stacked
+# upon the y negative semiaxis.
 
 
 # version of the configuration file
@@ -25,21 +27,25 @@ output:
 #--------------------------- BARPLOT OPTIONS -------------------------#
 
 
+# plot settings
 plot:
+  
   # plot type
   type: "contributions_barplot"
-
+  
   # plot options
   options:
+    # options for the bar plot
     barplot:
-      # barplot settings (passed to 'pandas.DataFrame.plot')   
+      # bars settings (passed to 'pandas.DataFrame.plot')   
       bars:
         stacked: True
 
       annot:
-        # whether to write annotations or not
+        # whether to write annotations with the total ΔΔG
+        # scores over the bars or not
         annot: True
-        # how many decimals to keep
+        # how many decimal digits to keep
         ndecimals: 3
         # style of the annotations
         style:
@@ -49,21 +55,33 @@ plot:
           va: "bottom"
           # font properties
           fontproperties:
+            # name of/path to the font
             fname: !!null
+            # size of the font
             size: 5
 
+    # options regaring the horizontal line that will be
+    # plotted at y value 0.0 (null energy contribution)
+    # (passed to 'matplotlib.pyplot.axhline') 
     axhline:
+      # line color
       color: "black"
+      # line style
       linestyle: "--"
-      linewidth: 1
-      
+      # line width
+      linewidth: 1      
 
-    # y-axis settings  
+    # x-axis settings  
     xaxis:
       # label settings (passed to 'matplotlib.axes.Axes.set_xlabel')
       label:
+        # text of the label
         xlabel: "Mutations"
+        # font properties
         fontproperties:
+          # name of/path to the font
+          fname: !!null
+          # font size
           size: 12
       # tick labels settings (passed to 
       # 'matplotlib.axes.Axes.set_xticklabels')  
@@ -72,14 +90,16 @@ plot:
         rotation: 90
         # tick label font properties
         fontproperties:
+          # name of/path to the font
           fname: !!null
+          # font size
           size: 8
       
     # y-axis settings
     yaxis:
-      # label settings 
-      # (passed to 'matplotlib.axes.Axes.set_ylabel')
+      # label settings (passed to 'matplotlib.axes.Axes.set_ylabel')
       label:
+        # text of the label
         ylabel: "ΔΔG scores (kcal/mol)"
       # tick labels settings 
       # (passed to 'matplotlib.axes.Axes.set_yticklabels')
@@ -88,10 +108,15 @@ plot:
         rotation: 0
         # tick label font properties
         fontproperties:
+          # name of/path to the font
           fname: !!null
+          # font size
           size: 8
+      # interval of values to be represented on the y-axis
       interval:
+        # interval type
         type: continuous
+        # whether to center the interval in zero
         center_in_zero: True
 
     # legend settings (passed to 'matplotlib.pyplot.legend')
@@ -108,4 +133,7 @@ plot:
       title: "Energy contributions"
       # font properties of the legend
       prop:
+        # name of/path to the font
+        fname: !!null       
+        # font size
         size: 10
