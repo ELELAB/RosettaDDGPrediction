@@ -3,19 +3,18 @@
 
 from setuptools import setup
 
-name = "RosettaDDGProtocols"
-url = "https://github.com/ELELAB/RosettaDDGProtocols"
+name = "RosettaDDGPrediction"
+url = "https://github.com/ELELAB/RosettaDDGPrediction"
 author = "Valentina Sora, Matteo Tiberti, Elena Papaleo"
 version = "0.0.1"
 description = "Python wrapper of Rosetta-based protocols for ΔΔG calculation."
-#package_data = {"RosettaDDGProtocols" : ["files/*", "config_run/*", "config_aggregate/*", "config_plot/*"]}
-package_dir = {"RosettaDDGProtocols" : "RosettaDDGProtocols"}
-packages = ["RosettaDDGProtocols"]
+package_dir = {"RosettaDDGPrediction" : "RosettaDDGPrediction"}
+packages = ["RosettaDDGPrediction"]
 entry_points = \
     {"console_scripts" : \
-        ["rosetta_ddg_run = RosettaDDGProtocols.rosetta_ddg_run:main", \
-         "rosetta_ddg_aggregate = RosettaDDGProtocols.rosetta_ddg_aggregate:main", \
-         "rosetta_ddg_plot = RosettaDDGProtocols.rosetta_ddg_plot:main"], \
+        ["rosetta_ddg_run = RosettaDDGPrediction.rosetta_ddg_run:main", \
+         "rosetta_ddg_aggregate = RosettaDDGPrediction.rosetta_ddg_aggregate:main", \
+         "rosetta_ddg_plot = RosettaDDGPrediction.rosetta_ddg_plot:main"], \
     }
 install_requires = ["biopython", \
                     "dask", \
