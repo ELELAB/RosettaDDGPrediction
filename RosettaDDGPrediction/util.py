@@ -68,14 +68,17 @@ from .defaults import (
 
 
 def get_rosetta_executable(execname, execpath, mpi):
-    """Get the path to a Rosetta executable from a the Rosetta
+    """Get the path to a Rosetta executable from the Rosetta
     installation directory.
     """
 
-    # get all executables available
+    # reset the worker logger
+    logger = reset_worker_logger()
+
+    # get all the executables available
     allexecs = os.listdir(execpath)
     
-    # filter function to get the a Rosetta executable (assumes
+    # filter function to get the Rosetta executable (assumes
     # the non-MPI version is requested)
     filt = lambda x: x.startswith(execname) and not ".mpi." in x
     # serial executables
@@ -93,19 +96,19 @@ def get_rosetta_executable(execname, execpath, mpi):
     
     # look for the MPI executable
     if mpi:
-        # modified filter function if the user wants to run
-        # with MPI (different set of Rosetta executables)
+        # modified filter function if the user wants to run with
+        # MPI (different set of Rosetta executables retrieved)
         filt = lambda x: x.startswith(execname) and ".mpi." in x
     
     # get all Rosetta executables satifying the criteria of
     # the filter function (you should get only one executable) 
     execs = list(filter(filt, allexecs))
     
-    # if not executable was found
+    # if no executable was found
     if len(execs) == 0:
         # raise an exception
         raise ValueError(f"No executable found for {execname}.")
-    # if multiple conflicting executables found
+    # if multiple conflicting executables were found
     elif len(execs) > 1:
         # raise an exception
         raise ValueError(f"Multiple executables found for {execname}.")
@@ -127,7 +130,8 @@ def run_rosetta(executable, \
     # make sure that the directory exists. If not, create it.
     os.makedirs(wd, exist_ok = True)
     
-    # set prefix (before Rosetta command line) to run with MPI
+    # set an empty prefix (before the Rosetta command line)
+    # to run with MPI (remains empty if you do not run with MPI)
     mpiprefix = []
     # if MPI is requested
     if usempi:
@@ -146,7 +150,8 @@ def run_rosetta(executable, \
     popen.wait()
     
     # return the Popen attributes of interest (cannot
-    # return Popen itself since it is not serializable)
+    # return Popen itself since it is not serializable and
+    # we are launching the process with Dask)
     return {"args" : popen.args, \
             "stdin" : popen.stdin, \
             "stdout" : popen.stdout, \
@@ -177,7 +182,8 @@ def parse_scorefile_text(scorefile):
                 l = [item for item in l.split(" ") if item != ""]
                 # the score is the second element
                 scores.append((nstruct, float(l[1])))
-                # update the structure number      
+                # update the structure number (each line
+                # corresponds to a structure)
                 nstruct += 1
         
         # return the scores
@@ -195,21 +201,24 @@ def write_flagsfile(options, flagsfile):
     os.makedirs(filepath, exist_ok = True)
 
     with open(flagsfile, "w") as f:
-        # format for the options
+        # format for the options (option and corresponding
+        # value are whitespace-separated)
         optfmt = "{:s} {:s}\n"
-        # format for the variables
+        # format for the variable substitutions in a RosettaScript
+        # (variable and corresponding substitution are separated
+        # by an equal sign)
         varfmt = "{:s}={:s}"
         # for each option, option value
         for key, val in options.items():
             # if the option value is a dictionary, there
             # are some variables
             if type(val) == dict:
-                # format the variables and their values
+                # format the variables and their substitutions
                 val = " ".join(\
                     [varfmt.format(k,v) for k, v in val.items()])
-            # write the option to the flag file
+            # write the option to the flags file
             f.write(optfmt.format(key, val))
-        # return the path to the flag file
+        # return the path to the flags file
         return os.path.abspath(flagsfile)
 
 
@@ -258,7 +267,7 @@ def write_resfile(mut, resfile):
         keys = (CHAIN, WTR, NUMR, MUTR)
         # set the header and start line
         out.write("NATAA\nstart")         
-        # each singlemut in the form ("A", "C151Y")
+        # each single mutation is in the form ("A", "C151Y")
         for smut in mut:
             chain, wtr, numr, mutr = operator.itemgetter(*keys)(smut)
             out.write(f"\n{numr} {chain} PIKAA {mutr}")
@@ -284,6 +293,7 @@ def convert_rosetta_option_to_string(option, value):
         # convert it to a string
         return str(value)
     
+    # otherwise, raise an exception
     else:
         raise ValueError(f"Unrecognized type {type(value)} for " \
                          f"value '{value}' of option '{option}'.")
@@ -293,26 +303,26 @@ def recursive_traverse(data, \
                        actions, \
                        keys = None, \
                        func = None):
-    """Recursively traverse a dictionary performing
-    actions on its items. 
+    """Recursively traverse a dictionary performing actions on
+    its items. It is used to traverse and modify the dictionary
+    of options retrieved when parsing a YAML configuration file.
 
-    Those include:
+    Actions than can be performed are:
     
     - pop_empty : removal of keys associated to `None` 
                   values.
     - substitute : substitution of values of specific
                    keys with a function of those values.
-    - substitute_dict : substitute an entire dictionary with
+    - substitute_dict : substitution of an entire dictionary with
                         a the return value of a function taking 
                         as arguments the items in the dictionary.
     """
-
 
     # if data is a dictionary
     if isinstance(data, dict):
         
         # keys of items on which the actions will be
-        # performed. If no keys is passed, all keys
+        # performed. If no keys are passed, all keys
         # in the dictionary will be considered.
         selkeys = keys if keys else data.keys()
         
@@ -328,7 +338,7 @@ def recursive_traverse(data, \
                     continue
 
             # if value is a dictionary
-            elif isinstance(v, dictinstances):
+            elif isinstance(v, dict):
                 # if the susbtitution concerns the entire
                 # dictionary
                 if "substitute_dict" in actions:
@@ -379,14 +389,22 @@ def get_config_run_version_1(config):
 
     # for each step
     for stepname, step in config["steps"].items():
+        
+        # if the stepname is not recognized, raise an error
+        if not stepname in ROSETTAPROTOCOLS[family].keys():
+            errstr = f"Unrecognized step name {stepname} " \
+                     f"for protocol family {family}."
+            raise ValueError(errstr)
+
         # get the step fixed settings
         stepsettings = ROSETTAPROTOCOLS[family][stepname]
+        
         # only consider Rosetta steps
         if stepsettings["runby"] == "rosetta":
             # create a copy of the configuration
             stepopts = dict(step["options"])
             # recursively remove all options that map
-            # to None and convert all of them to strings
+            # to None and convert the other ones to strings
             newstepopts = recursive_traverse(\
                             data = stepopts, \
                             actions = ["pop_empty", "substitute"], \
@@ -401,9 +419,6 @@ def get_config_run_version_1(config):
 
 def get_config_run(configfile):
     """Get the configuration for running the protocol."""
-
-    # reset the distributed.worker logger
-    logger = reset_worker_logger()
 
     # load the configuration from the file
     config = yaml.safe_load(open(configfile, "r"))
@@ -446,7 +461,7 @@ def get_option_key(options, option):
 def update_options(options, \
                    pdbfile, \
                    mut = None):
-    """Update a dictionary or Rosetta options with the input
+    """Update a dictionary of Rosetta options with the input
     PDB file and possibly replace specific placeholders with
     the corresponding attribute of a mutation.
     """
@@ -479,9 +494,8 @@ def update_options(options, \
         # otherwise take the absolute path of the RosettaScript
         else:
             rosettascript = os.path.abspath(rosettascript)
-        # add the option with the path to the RosettaScript
+        # add the option with the path to the RosettaScript option
         newoptions[rosettascriptopt] = rosettascript
-
     
         # if a mutation was passed
         if mut:
@@ -580,7 +594,7 @@ def get_mutlist(listfile):
 
 def get_reslist(reslistfile):
     """Parse the file containing the list of residue types
-    to be used for saturation mutagenesis.
+    to be used for saturation mutagenesis scans.
     """
             
     with open(reslistfile, "r") as f:
@@ -606,8 +620,8 @@ def get_saturation_mutlist(poslist, reslist):
             raise ValueError(errstr)
         # for each position in the list
         for (chain, wtr, pos) in posdata:
-            # add to the list all possible mutations for the
-            # current position
+            # add all possible mutations for the current
+            # position to the list
             satmutlist.extend(\
                 [(((chain, wtr, pos, res),), *extradata) \
                  for res in reslist])
@@ -633,14 +647,17 @@ def convert_to_pose_numbering(mutlist, pdbfile):
     # changing chain
     chainoffset = 0
     
+    # for each chain
     for chain in structure[0]:
+        # for each residue in the chain
         for ix, res in enumerate(chain, start = 1):
             # unpack the residue full ID
             struc, mod, chainid, (het, resn, icode) = res.get_full_id()
             # map the PDB chain and residue number to the numbering
             # that the residue will have in the mutfile (starts
-            # at 1 ) convert the PDB residue number to a string
-            pdbnum2posenum[(chainid, str(resn))] = str(ix + chainoffset)
+            # at 1); convert the PDB residue number to a string
+            pdbnum2posenum[(chainid, str(resn))] = \
+                str(ix + chainoffset)
         
         # update the chain offset
         chainoffset += ix
@@ -672,13 +689,14 @@ def generate_mutation_dirpath(mutdict):
     
     # each single mutation is in the form ("A", "C151Y")
     for smut in mutdict[MUT]:
+        # get the mutation attributes
         chain, wtr, numr, mutr = operator.itemgetter(*keys)(smut)
         # strip Rosetta identifiers of NCAA from the name
         # of the residues
         wtr = wtr.strip("X[]")
         mutr = mutr.strip("X[]")
         if chain != "_":
-            # chains with chain IDs
+            # chain with chain IDs
             fmtmuts.append(f"{chain}{DIRCHAINSEP}{wtr}{numr}{mutr}")
         else:
             # one chain with no chain ID
@@ -689,7 +707,7 @@ def generate_mutation_dirpath(mutdict):
     
     # if the run generates multiple structures
     if STRUCT in mutdict.keys():
-        # add another level
+        # add another level to the path
         dirpath = os.path.join(dirname, mutdict[STRUCT])
     else:
         dirpath = dirname
@@ -712,7 +730,9 @@ def get_mutations(listfile, \
                  f"'pdb', but '{resnumbering}' was passed."
         raise ValueError(errstr)
 
+
     #---------------------- Saturation or not? -----------------------#
+
 
     # get the mutations/positions list
     mutlist = get_mutlist(listfile)
@@ -723,7 +743,9 @@ def get_mutations(listfile, \
         # and generate the new list of mutations
         mutlist = get_saturation_mutlist(mutlist, reslist)
 
+
     #----------------------- Residue numbering -----------------------#
+
 
     # if the protocol requires the residue numbering to follow
     # the Rosetta pose numbering convention
@@ -734,7 +756,9 @@ def get_mutations(listfile, \
     # otherwise assume it follows the PDB convention (requires no
     # conversion)
 
+
     #------------------------ List generation ------------------------#
+
 
     # create an empty list to store the mutations
     mutations = []
@@ -803,6 +827,7 @@ def write_dirnames2mutations(mutations, d2mfile):
     with open(filename, "w") as out:
         # get the keys of the attributes of the mutation
         keys = (CHAIN, WTR, NUMR, MUTR, MUTDIRNAME)
+        # for each mutation
         for mut in mutations:
             # for each single mutation in the mutation (only
             # one expected since the function is used only in
@@ -851,7 +876,7 @@ def get_dirnames2mutations(d2mfile):
 
         # create a dataframe from the list
         df = pd.DataFrame(dirnames2mutations)
-        # sort mutations first by chain ID, the by residue number
+        # sort mutations first by chain ID, then by residue number
         # and finally alphabetically by wild-type residue
         df = df.sort_values(by = [CHAIN, NUMR, WTR])
         # create a column storing the position name (chain ID,
@@ -878,10 +903,11 @@ def check_pdbfile(pdbfile, \
     
     # create the PDB parser
     parser = PDB.PDBParser()
+    
     # try to get the structure
     try:
         structure = parser.get_structure("structure", pdbfile)
-    # in case the PDB file is not found
+    # in case the PDB file was not found
     except FileNotFoundError:
         # log the error and propagate the exception
         errstr = f"PDB file {pdbfile} not found."
@@ -905,12 +931,14 @@ def check_pdbfile(pdbfile, \
     
     # get the number of chains in the structure
     numchains = len(structure[0])
+    
     # check if multiple chains are allowed
     if not allow_multi_chains and numchains > 1:
         # raise an exception if the structure contains multiple
         # chains but multiple chains are not allowed
         errstr = "Multi-chains structures are not allowed."
         raise ValueError(errstr)
+    
     # check if the absence of chain IDs is allowed
     if not allow_no_chain_ids:
         # for each chain in the first model of the structure (it
@@ -921,6 +949,7 @@ def check_pdbfile(pdbfile, \
             if not chain.get_id():
                 errstr = "All chains must have a chain ID."
                 raise ValueError(errstr)
+    
     # return the PDB file
     return pdbfile
 

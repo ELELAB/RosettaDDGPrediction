@@ -3,7 +3,7 @@
 
 #    defaults.py
 #
-#    Hard-coded default parameters. Should only be changed
+#    Hard-coded defaults. Should only be changed
 #    for development purposes.
 #
 #    Copyright (C) 2020 Valentina Sora 
@@ -28,6 +28,7 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 
 
+# standard library
 import collections
 import os.path
 from pkg_resources import resource_filename, Requirement
@@ -140,6 +141,7 @@ NUMR = "_numr_"
 CHAIN = "_chain_"
 
 # all attributes that are not the mutant residue
+# (chain ID, wild-type residue and residue number)
 NOMUTR = "_nomutr_"
 
 # mutation directory path
@@ -155,8 +157,12 @@ MUTSEP = ","
 # (e.g. C.L.53 for mutating L53 on chain C)
 COMPSEP = "."
 
+# separator for chain ID and the rest of the mutation (wild-type
+# residue, residue number and mutant residue) in the directory name
 DIRCHAINSEP = "-"
 
+# separator for single mutations in the directory name (in case of
+# multiple simultaneous mutations)
 DIRMUTSEP = "_"
 
 
@@ -180,9 +186,10 @@ ROSETTADFCOLS = {"scfname" : "score_function_name", \
                  "totscore" : "total_score"}
 
 
+
 ############################### PLOTTING ##############################
 
 
-
+# valid plot types
 PLOTTYPES = ["total_heatmap", "total_heatmap_saturation", \
              "contributions_barplot", "dg_swarmplot"]

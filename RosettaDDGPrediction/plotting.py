@@ -100,7 +100,7 @@ def get_config_plot(configfile):
 
 def generate_ticks_positions(values, config):
     """Generate the positions that the ticks
-    will have on o a plot axis/colorbar/etc.
+    will have on a plot axis/colorbar/etc.
     """
     
     # get the configurations
@@ -118,11 +118,11 @@ def generate_ticks_positions(values, config):
         # default to rounding to the nearest 0.5
         rtn = 0.5
 
-    # if the maximum of the interval has not
+    # if the maximum of the ticks interval has not
     # been specified
     if not top:
         if inttype == "discrete":
-            # default top value is the minimum 
+            # default top value is the maximum
             # of the values provided
             top = int(max(values))
         elif inttype == "continuous":
@@ -130,11 +130,11 @@ def generate_ticks_positions(values, config):
             # maximum of the values
             top = np.ceil(max(values)*(1/rtn))/(1/rtn)
 
-    # if the minimum of the interval has not
+    # if the minimum of the ticks interval has not
     # been specified
     if not bottom:
         if inttype == "discrete":
-            # default bottom value is the maximum
+            # default bottom value is the minimum
             # of the values provided
             bottom = int(min(values))
         elif inttype == "continuous":
@@ -183,30 +183,36 @@ def generate_ticks_positions(values, config):
         # absolute value equal to absval
         top, bottom = absval, -absval
         # return an evenly spaced interval
-        # between top and bottom
+        # between top and bottom values
         return np.linspace(bottom, top, steps)
 
-    # return the interval
+    # return the ticks interval
     return np.arange(bottom, top + spacing, spacing)
 
 
 def generate_heatmap_annotations(df, config):
     """Generate the annotations to be plotted on 
-    a heatmap.
+    a heatmap (each cell is annotated with the
+    corresponding value).
     """
 
+    # if the configuration is empty
     if config == dict():
+        # return a tuple filled with None values
         return (None, None)
 
-    # if no annotation is requested, leave the dictionary
-    # for the annotation properties empty
+    # get the configuration for the style of the annotations
+    # and for the number of decimals to be kept in the
+    # annotations
     annot = config.get("annot")
     ndecimals = config.get("ndecimals", 2)
+    # if no annotation is requested, leave the dictionary
+    # for the annotation properties empty
     annotkws = {}
 
-    # if the annotation is requested
+    # if annotations are requested
     if config.get("annot"):
-        # create a function to set the scores 
+        # create a function to set the annotations 
         # to the desired precision
         annotfunc = lambda x : np.around(x, ndecimals) 
         # vectorize the function
@@ -227,29 +233,41 @@ def generate_barplot_annotations(ax, config, sumpos, total, yticks):
 
     # get whether the annotations are requested or not
     annot = config.get("annot")
-    # get the number of decimals 
+    # get the number of decimals to be kept in the annotations
     ndecimals = config.get("ndecimals")
+    # get the style of the annotations
     style = config.get("style")
 
     # if the annotation is requested
     annots = []
     if annot:
+        # get the spacing between two ticks on the y-axis
         spacing = yticks[1] - yticks[0]
+        # for each bar
         for patch, psum, score in zip(ax.patches, sumpos, total):
+            # get the position of the annotation on the x-axis
+            # (centered on the bar)
             x = patch.get_x() + patch.get_width()/2.0
+            # get the position of the annotation on the y-axis
+            # (slightly above the bar)
             y = psum + spacing/5
+            # round the annotation to the desired precision
             s = round(score, ndecimals)
+            # add the annotation over the corresponding bar
             ax.text(x, y, s, **style)
 
 
 def generate_axhline(ax, config, df):
+    """Generate a horizontal line passing through 0.0."""
     
+    # set the intercept of the line
     y = 0
+    # set the length of the line
     xmax = (len(df) - 0.25) / len(df)
-    
-    return plt.axhline(y = y, \
-                       xmax = xmax, \
-                       **config)
+    # plot the line
+    plt.axhline(y = y, \
+                xmax = xmax, \
+                **config)
 
 
 def generate_colorbar(mappable, \
@@ -264,10 +282,10 @@ def generate_colorbar(mappable, \
 
     # if there is an axis label
     if config["label"].get("ylabel"):
-        # set colorbar label     
+        # set the colorbar label     
         cbar.ax.set_ylabel(**config.get("label"))
     
-    # set colorbar ticks and ticks labels
+    # set the colorbar ticks and ticks labels
     # setting ticks on cbar.ax raises a UserWarning, but setting
     # tick labels does not
     cbar.set_ticks(ticks)
@@ -378,6 +396,15 @@ def plot_total_heatmap(df, \
                        config, \
                        saturation = False, \
                        d2mfile = None):
+    """Plot either:
+
+    - a one-row heatmap where all mutations are displayed on the
+      x-axis, each one displayed as a cell color-coded according to
+      the total ΔΔG score corresponding to that mutation;
+
+    - a 2D heatmap containing the total ΔΔG scores for positions on
+      which a saturation mutagenesis scan was performed.
+    """
     
     # clear the figure
     plt.clf()
@@ -395,6 +422,7 @@ def plot_total_heatmap(df, \
     # take only the total ΔΔG values
     finaldf = df[df[statecol] == "ddg"][[mutationcol, totscorecol]]
     
+    # if the data are from a saturation mutagenesis scan
     if saturation:
         # get a dataframe containing both mutation names
         # and all mutation elements
@@ -403,7 +431,7 @@ def plot_total_heatmap(df, \
         finaldf = pd.merge(d2m, finaldf, on = mutationcol)
         # drop the mutation column
         finaldf = finaldf.drop(mutationcol, axis = 1)
-        # create a dataframe where rows are residues (identified
+        # create a dataframe where rows are positions (identified
         # by all mutation elements that are not the mutated residue,
         # such as chain, residue number and wild-type residue) and
         # columns are mutated residues
@@ -416,6 +444,7 @@ def plot_total_heatmap(df, \
         # automatically placed
         yticks = None
 
+    # if the data are not from a saturation mutagenesis scan
     else:
         # set the mutations as index, drop the column containin
         # them and transpose the dataframe so that the mutations
@@ -512,8 +541,10 @@ def plot_total_heatmap(df, \
 
 
 def plot_dg_swarmplot(df, config):
-    """Plot a swarmplot..."""
-
+    """Plot a swarmplot showing, for each mutation, the ΔG score of
+    each wild-type and mutant structure present in the ensemble of
+    structures generated by the protocol.
+    """
     
     # clear the figure
     plt.clf()
@@ -542,7 +573,7 @@ def plot_dg_swarmplot(df, config):
     # get the x-axis tick positions
     xticks = range(len(xticklabels))
     
-    # numeric values of interest will be total ΔΔG values
+    # numeric values of interest will be the ΔG values
     yvalues = df[totscorecol].values.flatten()
     # set x, y and hue columns that will be used
     # to generate the swarmplot
@@ -592,7 +623,7 @@ def plot_dg_swarmplot(df, config):
              ticks = xticks, \
              ticklabels = xticklabels)
 
-    # set the x-axis
+    # set the y-axis
     set_axis(ax = ax, \
              axis = "y", \
              config = yconfig, \
@@ -603,6 +634,12 @@ def plot_dg_swarmplot(df, config):
 
 
 def plot_contributions_barplot(df, contributions, config):
+    """Plot a bar plot with stacked bars representing the different
+    energy contributions making up the total ΔΔG scores. 
+    Positive contributions are stacked upon the y positive
+    semiaxis while negative contributions are stacked upon
+    the y negative semiaxis.
+    """
 
     # clear the figure
     plt.clf()
@@ -648,7 +685,7 @@ def plot_contributions_barplot(df, contributions, config):
     #------------------------- Configuration -------------------------#
 
 
-    # get the configuration for the barplot, the legend, the line
+    # get the configuration for the bar plot, the legend, the line
     # marking y coordinate 0.0 and the x- and the y-axis
     bconfig, lconfig, axhconfig, xconfig, yconfig = \
         get_items(config, ("barplot", "legend", "axhline", \
@@ -671,7 +708,6 @@ def plot_contributions_barplot(df, contributions, config):
     # stacked on the positive semiaxis and negative contributions are
     # stacked on the negative semiaxis
     ax = dfcontr.plot(kind = "bar", **bconfigbars)
-
 
     # get the positions of the ticks on the y-axis
     yticks = generate_ticks_positions(values = yvalues, \
@@ -702,7 +738,7 @@ def plot_contributions_barplot(df, contributions, config):
              ticks = xticks, \
              ticklabels = xticklabels)
 
-    # set the x-axis
+    # set the y-axis
     set_axis(ax = ax, \
              axis = "y", \
              config = yconfig, \

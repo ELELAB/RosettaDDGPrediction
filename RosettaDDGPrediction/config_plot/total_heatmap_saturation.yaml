@@ -1,4 +1,4 @@
-# Configuration file for plotting a heatmap containing the total
+# Configuration file for plotting a 2D heatmap containing the total
 # ΔΔG scores for positions on which a saturation mutagenesis scan
 # was performed. 
 #

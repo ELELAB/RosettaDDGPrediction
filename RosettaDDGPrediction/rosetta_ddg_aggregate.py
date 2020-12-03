@@ -113,7 +113,7 @@ def main():
     # if the configuration file is a name without extension
     if configfilerun == configrunname:
         # assume it is a configuration file in the directory
-        # storing configuration files for running the protococols
+        # storing configuration files for running protocols
         configfilerun = os.path.join(CONFIGRUNDIR, \
                                      configrunname + ".yaml")
     # otherwise assume it is a file name/file path
@@ -126,7 +126,7 @@ def main():
         # configuration files for data aggregation are stored
         configfileaggr = os.path.join(CONFIGAGGRDIR, \
                                       configaggrname + ".yaml")
-    # other wise assume it is a file name/file path
+    # otherwise assume it is a file name/file path
     else:
         configfileaggr = util.get_abspath(configfileaggr)
 
@@ -199,6 +199,7 @@ def main():
     # create empty lists to store the dataframes for each mutation
     mutaggrdfs = []
     mutstructdfs = []
+
     
     # if the output directory does not exist, create it
     os.makedirs(outdir, exist_ok = True)
@@ -252,13 +253,13 @@ def main():
                 util.get_option_key(options = rscriptoptions, \
                                     option = "scfname")]
         
-        # number of backrub trials
+        # get the number of backrub trials
         backrubntrials = \
             rscriptoptions[\
                 util.get_option_key(options = rscriptoptions, \
                                     option = "backrubntrials")]
         
-        # backrub trajectory stride
+        # get the backrub trajectory stride
         backrubtrajstride = \
             rscriptoptions[\
                 util.get_option_key(options = rscriptoptions, \
@@ -266,8 +267,10 @@ def main():
     
         # get the number of structures generated
         nstruct = configrun["mutations"]["nstruct"]
+        
         # format the structure names as strings
         structnums = [str(num) for num in range(1, nstruct + 1)]
+        
         # compute the trajectory stride
         trajstride = int(backrubntrials) // int(backrubtrajstride)
 
@@ -302,7 +305,7 @@ def main():
                         ddgout = ddgout, \
                         listcontributions = listcontributions, \
                         scfname = scfname)
-            # if something goes wrong, report it and continue
+            # if something went wrong, report it and continue
             except Exception as e:
                 log.warning(f"Could not parse {ddgout}: {e}")
                 continue
@@ -312,6 +315,7 @@ def main():
                 dfs = aggregation.aggregate_data_cartddg(\
                         df = df, \
                         listcontributions = listcontributions)
+            # if something went wrong, report it and exit
             except Exception as e:
                 log.error(f"Could not aggregate data for " \
                           f"{os.path.basename(mutpath)}: {e}")
@@ -321,7 +325,8 @@ def main():
         # if the protocol is a flexddg protocol
         elif family == "flexddg":
             
-            # list of dataframes for all structures
+            # initialize an empty list to store
+            # dataframes for all structures
             structdfs = []
             
             # for each structure
@@ -330,14 +335,14 @@ def main():
                 structpath = os.path.join(mutpath, structnum)
                 # path to the .db3 output file 
                 db3out = os.path.join(structpath, outname)
-                # try to get the structure df
+                # try to create a dataframe from the .db3 output file
                 try:
                     df = aggregation.parse_output_flexddg(\
                             db3out = db3out, \
                             trajstride = trajstride, \
                             structnum = structnum, \
                             scfname = scfname)
-                # if something goes wrong, report it and continue
+                # if something went wrong, report it and continue
                 except Exception as e:
                     log.warning(f"Could not parse {db3out}: {e}")
                     continue
@@ -350,7 +355,7 @@ def main():
                 dfs = aggregation.aggregate_data_flexddg(\
                         df = pd.concat(structdfs), \
                         listcontributions = listcontributions)
-            # if something goes wrong, report it and exit
+            # if something went wrong, report it and exit
             except Exception as e:
                 log.error(f"Could not aggregate data for " \
                           f"{os.path.basename(mutpath)}: {e}")
@@ -372,7 +377,7 @@ def main():
                                 rescale = rescale, \
                                 listcontributions = listcontributions, \
                                 convfact = convfact)
-        # if something goes wrong, report it and exit
+        # if something went wrong, report it and exit
         except Exception as e:
             log.error(f"Could not generate output dataframes: {e}")
             sys.exit(1)
@@ -386,7 +391,7 @@ def main():
         structdf.to_csv(os.path.join(outdir, mutname + ossuffix), \
                         **dfsoptions)
         
-        # add the dataframes to the list of all-mutations dataframes
+        # add the dataframes to the lists of all-mutations dataframes
         mutaggrdfs.append(aggrdf)
         mutstructdfs.append(structdf)
 
@@ -395,7 +400,7 @@ def main():
     mutaggrdf = pd.concat(mutaggrdfs)
     mutstructdf = pd.concat(mutstructdfs)
     
-    # save the dataframes
+    # save the dataframes with data for all the mutations
     mutaggrdf.to_csv(os.path.join(outdir, mutaggr), **dfsoptions)
     mutstructdf.to_csv(os.path.join(outdir, mutstruct), **dfsoptions)
 

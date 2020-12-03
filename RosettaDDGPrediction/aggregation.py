@@ -43,7 +43,7 @@ def parse_output_cartddg(ddgout, \
                          scfname):
     """Parse the output file from cartddg protocols."""
 
-    # column names
+    # get the column names
     scfnamecol = ROSETTADFCOLS["scfname"]
     statecol = ROSETTADFCOLS["state"]
     structnumcol = ROSETTADFCOLS["structnum"]
@@ -60,7 +60,7 @@ def parse_output_cartddg(ddgout, \
         # for each line
         for line in f:
             if line.startswith("COMPLEX:"):
-                # ddg_stability output
+                # split the line and remove empty elements
                 line = \
                     [item for item in line.strip("\n").split(" ") \
                      if item != ""]
@@ -116,7 +116,7 @@ def aggregate_data_cartddg(df, \
                            listcontributions):
     """Aggregate data for cartddg protocols."""
 
-    # column names
+    # get the column names
     statecol = ROSETTADFCOLS["state"]
     structnumcol = ROSETTADFCOLS["structnum"]
     totscorecol = ROSETTADFCOLS["totscore"]
@@ -146,7 +146,7 @@ def parse_output_flexddg(db3out, \
                          scfname):
     """Parse the .db3 output from flexddg protocols."""
 
-    # column names
+    # get the column names
     structidcol = ROSETTADFCOLS["structid"]
     namecol = ROSETTADFCOLS["name"]
     statecol = ROSETTADFCOLS["state"]
@@ -190,8 +190,13 @@ def parse_output_flexddg(db3out, \
         f"INNER JOIN score_function_method_options ON {injoinscfun}\n" \
         f"INNER JOIN score_types ON {injoinsctype}"
     
-    # read the query into a dataframe
-    df = pd.read_sql_query(query, connection)
+    # try to read the query into a dataframe
+    try:
+        df = pd.read_sql_query(query, connection)
+    # if something went wrong, raise an error
+    except Exception as e:
+        errstr = f"Could not query the .db3 file ({db3out}): {e}"
+        raise IOError(errstr)
     
     # function to renumber the structure IDs
     getnewid = lambda x: trajstride * (1 + (int(x - 1) // nbatches))
@@ -199,19 +204,19 @@ def parse_output_flexddg(db3out, \
     getnewname = lambda x: x.replace("_dbreport", "") \
                  if x.endswith('_dbreport') else x
     
-    # renumber structure IDs
+    # renumber the structure IDs
     df[bstepscol] = df[structidcol].apply(getnewid)
-    # rename structures
+    # rename the structures
     df[statecol] = df[namecol].apply(getnewname)
     
-    # convert into a pivot table
+    # convert the dataframe into a pivot table
     df = df.pivot_table(index = [statecol, bstepscol, scfnamecol], \
                         columns = sctypecol, \
                         values = scvaluecol).reset_index()
     
-    # add column for the structure number
+    # add a column for the structure number
     df[structnumcol] = structnum
-    # add complete score function name to the
+    # add the complete score function name to the
     # score function name column
     df[scfnamecol] = scfname
     # remove unnecessary column names
@@ -228,7 +233,7 @@ def aggregate_data_flexddg(df, \
                            listcontributions):
     """Aggregate data for flexddg protocols."""
 
-    # column names
+    # get the column names
     statecol = ROSETTADFCOLS["state"]
     scfnamecol = ROSETTADFCOLS["scfname"]
     bstepscol = ROSETTADFCOLS["bsteps"]
@@ -253,7 +258,8 @@ def aggregate_data_flexddg(df, \
     bmut = df.loc[(df[statecol] == "bound_mut") & bstepscond]
     
     # get the scores (reset index to make it uniform to be able
-    # to perform the subtraction later)
+    # to perform the subtraction between mutant ΔGs and
+    # wild-type ΔGs later)
     ubwtscores = ubwt[scorecols].reset_index(drop = True)
     ubmutscores = ubmut[scorecols].reset_index(drop = True)
     bwtscores = bwt[scorecols].reset_index(drop = True)
@@ -270,7 +276,8 @@ def aggregate_data_flexddg(df, \
     
     # create a copy of the dataframe containing the mutant ΔG scores
     ddg = dgmut.copy()
-    # subtract the wild-type ΔG scores to obtain the ΔΔG scores
+    # subtract the wild-type ΔG scores from the mutant ΔG scores
+    # to obtain the ΔΔG scores
     ddg[scorecols] = dgmut[scorecols] - dgwt[scorecols]
     
     # add a column to all dataframes with the state
@@ -294,7 +301,7 @@ def generate_output_dataframes(dgwt, \
                                listcontributions, \
                                convfact):
     
-    # columns names
+    # get the columns names
     mutationcol = ROSETTADFCOLS["mutation"]
     statecol = ROSETTADFCOLS["state"]
     totscorecol = ROSETTADFCOLS["totscore"]
@@ -331,8 +338,9 @@ def generate_output_dataframes(dgwt, \
 
     # default energy units are Rosetta Energy Units
     energyunit = "REUs"
+    # if rescaling has been requested
     if rescale:
-        # rescale the ΔΔG scores to kcal/mol.
+        # rescale the ΔΔG scores to kcal/mol
         aggrdf[scorecols] = aggrdf[scorecols] * 1.0/convfact
         structdf[scorecols] = structdf[scorecols] * 1.0/convfact
         # change the energy unit
@@ -340,12 +348,13 @@ def generate_output_dataframes(dgwt, \
 
     #------------------------ Add units column -----------------------#
 
-    # add the energy units columns
+    # add the energy units column to both dataframes
     aggrdf[energyunitcol] = energyunit
     structdf[energyunitcol] = energyunit
 
     #-------------------------- Sort columns -------------------------#
 
+    # sort columns in both dataframes
     aggrdf = aggrdf[aggrdfcols]
     structdf = structdf[structdfcols]
 

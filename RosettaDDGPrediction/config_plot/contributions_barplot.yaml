@@ -1,6 +1,6 @@
 # Configuration file for plotting a bar plot with stacked bars
 # representing the different energy contributions making up the
-# total ΔΔG score. Positive contributions are stacked upon the
+# total ΔΔG scores. Positive contributions are stacked upon the
 # y positive semiaxis while negative contributions are stacked
 # upon the y negative semiaxis.
 

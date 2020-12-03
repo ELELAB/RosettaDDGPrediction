@@ -40,7 +40,6 @@ import dask
 from distributed import Client, LocalCluster
 import yaml
 # RosettaDDGProtocols
-from . import util
 from .defaults import (
     CONFIGRUNDIR,
     CONFIGSETTINGSDIR,
@@ -49,6 +48,7 @@ from .defaults import (
     ROSETTAPROTOCOLS
 )
 from . import pythonsteps
+from . import util
 
 
 
@@ -175,7 +175,7 @@ def main():
     # if the configuration file is a name without extension
     if configfilerun == configrunname:
         # assume it is a configuration file in the directory
-        # storing configuration files for running the protocols
+        # storing configuration files for running protocols
         configfilerun = os.path.join(CONFIGRUNDIR, \
                                      configrunname + ".yaml")
     # otherwise assume it is a file name/file path
@@ -237,14 +237,21 @@ def main():
     # get the protocol family
     family = options["family"]
 
-    # get the full Rosetta path to the executables
+    # get the full Rosetta path to the executables (path to
+    # where Rosetta is installed + path to where Rosetta
+    # executables are usually stored)
     execpath = os.path.join(rosettapath, \
                             settings["rosetta"]["execpath"])
     
-    
+
+
+    ########################### INPUT FILES ###########################
+
+ 
+
     # try to load the PDB file
     try:
-        # set the current PDB file to the PDB passed
+        # set the current PDB file to the PDB passed by the user
         # (after checking it)
         currpdbfile = client.submit(util.check_pdbfile, \
                                     pdbfile = pdbfile, \
@@ -255,24 +262,37 @@ def main():
         sys.exit(errstr)
     
     
-    # try to generate the list of mutations
-    try:
-        mutations = client.submit(util.get_mutations, \
-                                  listfile = listfile, \
-                                  reslistfile = reslistfile, \
-                                  pdbfile = currpdbfile, \
-                                  **options["mutations"]).result()
-    # if something went wrong, report it and exit
-    except Exception as e:
-        errstr = f"Could not generate the list of mutations: {e}"
-        sys.exit(errstr)   
+    # if the file with the list of mutations was passed
+    if listfile:
+        # try to generate the list of mutations
+        try:
+            mutations = client.submit(util.get_mutations, \
+                                      listfile = listfile, \
+                                      reslistfile = reslistfile, \
+                                      pdbfile = currpdbfile, \
+                                      **options["mutations"]).result()
+        # if something went wrong, report it and exit
+        except Exception as e:
+            errstr = f"Could not generate the list of mutations: {e}"
+            sys.exit(errstr)
+    # otherwise
+    else:
+        # no mutations will be performed
+        mutations = [] 
+
+
+
+    ############################### RUN ###############################
+
 
     
     # create an empty list to keep track of the running futures
     futures = []  
+
     
     # for each step of the protocol that has to be run
     for stepname, step in steps.items():
+
 
         # if there are still pending futures from the previous step
         if futures:
@@ -286,6 +306,7 @@ def main():
 
         # get the step features
         stepfeatures = ROSETTAPROTOCOLS[family][stepname]
+
 
         # if the step is run via Rosetta commands
         if stepfeatures["runby"] == "rosetta":
@@ -309,8 +330,9 @@ def main():
             # if something went wrong, report it and exit
             except Exception as e:
                 errstr = f"Could not get Rosetta executable " \
-                         f"{executable} from {execpath}."
+                         f"'{executable}' from {execpath}."
                 sys.exit(errstr)
+
         
             # if it is a processing step
             if role == "processing":
@@ -331,7 +353,9 @@ def main():
                 
                 # submit the calculation
                 # NB: all processes will be used as MPI processes
-                # if MPI is available
+                # if MPI is available, since there is no need for
+                # parallelization over the mutations (it is a
+                # processing step).
                 futures.append(\
                     client.submit(util.run_rosetta, \
                                   executable = executable, \
@@ -354,6 +378,7 @@ def main():
                     # set the flags file and Rosetta output
                     flagsfile = os.path.join(mutwd, step["flagsfile"])
                     output = os.path.join(mutwd, step["output"])          
+
                     
                     # if the step is cartesian ΔΔG calculation
                     if stepname == "cartesian":
@@ -379,7 +404,8 @@ def main():
                                                 options = stepopts, \
                                                 pdbfile = currpdbfile)
 
-                    # if the step is Flex_ddG ΔΔG calculation
+
+                    # if the step is Flex ddG ΔΔG calculation
                     elif stepname == "flexddg":
                         
                         # get the keyword used to specify the Rosetta
@@ -412,6 +438,7 @@ def main():
                                                 options = stepopts, \
                                                 pdbfile = currpdbfile, \
                                                 mut = mut)                                
+
                     
                     # write the flagsfile
                     flagsfile = client.submit(util.write_flagsfile, \
@@ -421,7 +448,8 @@ def main():
                     # submit the calculation
                     # NB: only one MPI process will be used if MPI is
                     # available since there is no gain in using MPI
-                    # with cartesian_ddg or the Flex ddG script
+                    # with cartesian_ddg or the Flex ddG procedure.
+                    # The parallelization is done over the mutations.
                     futures.append(\
                         client.submit(util.run_rosetta, \
                                       executable = executable, \
@@ -430,6 +458,7 @@ def main():
                                       mpinproc = 1, \
                                       wd = mutwd, \
                                       **settings["mpi"]))
+
 
                 # if it is a saturation mutagenesis scan
                 if saturation:
@@ -476,8 +505,8 @@ def main():
                 # get the name of the current PDB file
                 pdbfile = os.path.basename(currpdbfile)
 
-                # try to get the name of the selected PDB file
-                # use the options from the previous (Rosetta) step
+                # try to get the name of the selected PDB file by
+                # using the options from the previous (Rosetta) step
                 # to retrieve the correct PDB file
                 try:
                     currpdbfilename = \
@@ -494,6 +523,7 @@ def main():
                 # get the path to the PDB file
                 currpdbfile = os.path.join(prevwd, currpdbfilename)
 
+
         # store the previous step options
         prevopts = stepopts
 
@@ -501,9 +531,9 @@ def main():
         prevwd = stepwd
   
 
-    # gather remaining futures after running all steps
+    # gather the futures pending after running all steps
     client.gather(futures)
 
 
 if __name__ == "__main__":
-    main()                    
+    main()

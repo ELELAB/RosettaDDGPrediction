@@ -1,6 +1,33 @@
 #!/usr/bin/env python
 # -*- Mode: python; tab-width: 4; indent-tabs-mode:nil; coding:utf-8 -*-
 
+#    pythonsteps.py
+#
+#    Protocol steps performed by Python.
+#
+#    Copyright (C) 2020 Valentina Sora 
+#                       <sora.valentina1@gmail.com>
+#                       Matteo Tiberti 
+#                       <matteo.tiberti@gmail.com> 
+#                       Elena Papaleo
+#                       <elenap@cancer.dk>
+#
+#    This program is free software: you can redistribute it and/or
+#    modify it under the terms of the GNU General Public License as
+#    published by the Free Software Foundation, either version 3 of
+#    the License, or (at your option) any later version.
+#
+#    This program is distributed in the hope that it will be useful,
+#    but WITHOUT ANY WARRANTY; without even the implied warranty of
+#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+#    GNU General Public License for more details.
+#
+#    You should have received a copy of the GNU General Public
+#    License along with this program. 
+#    If not, see <http://www.gnu.org/licenses/>.
+
+
+
 # standard library
 import bisect
 import random
@@ -12,7 +39,7 @@ from . import util
 def select_structure(select, \
                      infile, \
                      infiletype):
-    """Select a structure (=return its path) based on data stored
+    """Select a structure (= return its path) based on data stored
     in different Rosetta output files. The structres themselves are
     assumed to live in the same directory as the output file to be
     parsed.
@@ -20,6 +47,7 @@ def select_structure(select, \
 
     #-------------------------- File parsing -------------------------#
 
+    
     # if getting data about the structure from a scorefile
     if infiletype == "scorefile_text":
         # open and parse the file
@@ -28,8 +56,10 @@ def select_structure(select, \
         # no parsing for other file types has been implemented so far
         raise NotImplementedError
 
+    
     #---------------------- Structure selection ----------------------#
 
+    
     # select a random structure
     if select == "random":
         struct, sdata = random.choice(data)

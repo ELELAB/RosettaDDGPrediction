@@ -162,18 +162,20 @@ def main():
 
 
     
-    # try to get the aggregation configuration
+    # try to get the configuration for data aggregation
     try:
-        configaggr = yaml.safe_load(open(configfileaggr))
-    # if something goes wrong, report it and exit
+        configaggr = \
+            yaml.safe_load(open(configfileaggr))
+    # if something went wrong, report it and exit
     except Exception as e:
         log.error(f"Could not parse {configfileaggr}: {e}")
         sys.exit(1)
     
     # try to get the plot+output configuration
     try:
-        configplot = plotting.get_config_plot(configfile = configfileplot)
-    # if something goes wrong, report it and exit
+        configplot = \
+            plotting.get_config_plot(configfile = configfileplot)
+    # if something went wrong, report it and exit
     except Exception as e:
         log.error(f"Could not parse {configfileplot}: {e}")
         sys.exit(1)
@@ -190,7 +192,7 @@ def main():
 
 
 
-    # try to load the dataframe
+    # try to load the input dataframe
     try:
         df = pd.read_csv(infile)
     # if something goes wrong, report it and exit
@@ -218,8 +220,8 @@ def main():
                                              saturation = True, \
                                              d2mfile = d2mfile)
 
-        # if the plot is a barplot separating its total score into
-        # its energy contributions
+        # if the plot is a barplot dividing the total ΔΔG score
+        # into its energy contributions
         elif plottype == "contributions_barplot":
             contributions = configaggr["energy_contributions"][scfname]
             ax = plotting.plot_contributions_barplot(\
@@ -228,7 +230,7 @@ def main():
                                     contributions = contributions)
 
         # if the plot is a swarmplot showing the distributions of
-        # total scores for both wild-type and mutant structures
+        # total ΔG scores for all wild-type and mutant structures
         elif plottype == "dg_swarmplot":
             ax = plotting.plot_dg_swarmplot(df = df, \
                                             config = config)
@@ -239,7 +241,7 @@ def main():
             sys.exit(1)
 
 
-    # if something goes wrong, report it and exit
+    # if something went wrong, report it and exit
     except Exception as e:
         log.error(f"Could not generate the {plottype} plot: {e}")
         sys.exit(1)
