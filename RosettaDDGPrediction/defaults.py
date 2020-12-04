@@ -83,28 +83,28 @@ ROSETTAOPTIONS = \
 
 # directory containing configuration files for running the protocols
 CONFIGRUNDIR = \
-    resource_filename(Requirement("RosettaDDGProtocols"), \
-                      "RosettaDDGProtocols/config_run")
+    resource_filename(Requirement("RosettaDDGPrediction"), \
+                      "RosettaDDGPrediction/config_run")
 
 # directory containing configuration files for aggregating results
 CONFIGAGGRDIR = \
-    resource_filename(Requirement("RosettaDDGProtocols"), \
-                      "RosettaDDGProtocols/config_aggregate")
+    resource_filename(Requirement("RosettaDDGPrediction"), \
+                      "RosettaDDGPrediction/config_aggregate")
 
 # directory containing configuration files for plotting
 CONFIGPLOTDIR = \
-    resource_filename(Requirement("RosettaDDGProtocols"), \
-                      "RosettaDDGProtocols/config_plot")
+    resource_filename(Requirement("RosettaDDGPrediction"), \
+                      "RosettaDDGPrediction/config_plot")
 
 # directory containing configuration files for run settings
 CONFIGSETTINGSDIR = \
-    resource_filename(Requirement("RosettaDDGProtocols"), \
-                      "RosettaDDGProtocols/config_settings")
+    resource_filename(Requirement("RosettaDDGPrediction"), \
+                      "RosettaDDGPrediction/config_settings")
 
 # directory containing RosettaScripts used in some protocols
 ROSETTASCRIPTSDIR = \
-    resource_filename(Requirement("RosettaDDGProtocols"), \
-                    "RosettaDDGProtocols/RosettaScripts")
+    resource_filename(Requirement("RosettaDDGPrediction"), \
+                    "RosettaDDGPrediction/RosettaScripts")
 
 # default configuration file for data aggregation
 CONFIGAGGRFILE = os.path.join(CONFIGAGGRDIR, "aggregate.yaml")
