@@ -467,7 +467,7 @@ def main():
                     # names to the mutations
                     client.submit(util.write_dirnames2mutations, \
                                   mutations = mutations, \
-                                  **options.get["saturation"])
+                                  **options.get("saturation"))
 
       
         # if the step is run by Python
