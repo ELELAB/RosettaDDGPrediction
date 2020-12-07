@@ -28,3 +28,5 @@ localcluster:
 rosetta:
   # usual Rosetta path for executables
   execpath: "main/source/bin"
+  # suffix of the Rosetta executables
+  execsuffix: .linuxgccrelease
