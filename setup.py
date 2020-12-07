@@ -10,6 +10,12 @@ version = "0.0.1"
 description = "Python wrapper of Rosetta-based protocols for ΔΔG calculation."
 package_dir = {"RosettaDDGPrediction" : "RosettaDDGPrediction"}
 packages = ["RosettaDDGPrediction"]
+package_data = {'RosettaDDGPrediction' : ['config_aggregate/*',
+                                          'config_plot/*',
+                                          'config_run/*',
+                                          'config_settings/*',
+                                          'files/*',
+                                          'RosettaScripts/*']}
 entry_points = \
     {"console_scripts" : \
         ["rosetta_ddg_run = RosettaDDGPrediction.rosetta_ddg_run:main", \
@@ -32,7 +38,9 @@ setup(name = name, \
       version = version, \
       description = description, \
       include_package_data = True, \
+      package_data = package_data, \
       package_dir = package_dir, \
       packages = packages, \
       entry_points = entry_points, \
       install_requires = install_requires)
+
