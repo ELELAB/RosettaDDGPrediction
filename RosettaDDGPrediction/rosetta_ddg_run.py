@@ -242,6 +242,11 @@ def main():
     # executables are usually stored)
     execpath = os.path.join(rosettapath, \
                             settings["rosetta"]["execpath"])
+
+    # get the suffix the Rosetta executables of interest should
+    # have (it differs according to whether they support MPI, to
+    # the compiler used, etc.)
+    execsuffix = settings["rosetta"]["execsuffix"]
     
 
 
@@ -326,7 +331,7 @@ def main():
                     client.submit(util.get_rosetta_executable, \
                                   execname = executable, \
                                   execpath = execpath, \
-                                  mpi = settings["mpi"]["usempi"])
+                                  execsuffix = execsuffix)
             # if something went wrong, report it and exit
             except Exception as e:
                 errstr = f"Could not get Rosetta executable " \

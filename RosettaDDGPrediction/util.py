@@ -67,7 +67,7 @@ from .defaults import (
 
 
 
-def get_rosetta_executable(execname, execpath, mpi):
+def get_rosetta_executable(execname, execpath, execsuffix):
     """Get the path to a Rosetta executable from the Rosetta
     installation directory.
     """
@@ -78,27 +78,13 @@ def get_rosetta_executable(execname, execpath, mpi):
     # get all the executables available
     allexecs = os.listdir(execpath)
     
-    # filter function to get the Rosetta executable (assumes
-    # the non-MPI version is requested)
-    filt = lambda x: x.startswith(execname) and not ".mpi." in x
-    # serial executables
-    serialexecs = list(filter(filt, allexecs))
-    
-    # if no serial executable is found
-    if len(serialexecs) == 0:
-        # inform the user that you are now looking for the
-        # MPI version of the executable
-        logstr = f"No serial version of {execname} found, " \
-                 f"now looking for the MPI version."
-        logger.info(logstr)
-        # enable lookup for the MPI executable
-        mpi = True
-    
-    # look for the MPI executable
-    if mpi:
-        # modified filter function if the user wants to run with
-        # MPI (different set of Rosetta executables retrieved)
-        filt = lambda x: x.startswith(execname) and ".mpi." in x
+    # if no suffix was provided, assume the executable name does not
+    # have any suffix
+    execcompname = execname + execsuffix if execsuffix is not None \
+                   else execname
+
+    # filter function to get the Rosetta executables
+    filt = lambda x: x == execcompname
     
     # get all Rosetta executables satifying the criteria of
     # the filter function (you should get only one executable) 
@@ -107,11 +93,12 @@ def get_rosetta_executable(execname, execpath, mpi):
     # if no executable was found
     if len(execs) == 0:
         # raise an exception
-        raise ValueError(f"No executable found for {execname}.")
+        raise ValueError(f"No executable found for {execcompname}.")
     # if multiple conflicting executables were found
     elif len(execs) > 1:
         # raise an exception
-        raise ValueError(f"Multiple executables found for {execname}.")
+        raise ValueError(f"Multiple executables found for " \
+                         f"{execcompname}.")
 
     # return the path to the executable
     return os.path.join(execpath, execs[0])
