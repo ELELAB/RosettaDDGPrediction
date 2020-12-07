@@ -123,7 +123,7 @@ def run_rosetta(executable, \
     # if MPI is requested
     if usempi:
         # update the MPI prefix
-        mpiprefix.extend([mpiexec, "-n", str(mpinproc)] + [mpiargs])
+        mpiprefix.extend([mpiexec, "-n", str(mpinproc)] + mpiargs)
     # set the arguments for the command line
     args = mpiprefix + [executable, "@", flagsfile]
     
