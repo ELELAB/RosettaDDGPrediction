@@ -91,7 +91,7 @@ def main():
     cs_help = \
         f"Configuration file containing settings to be used for " \
         f"the run. If it is a name without extension, it is assumed " \
-        f"to be the name of a YAML file in {CONFIGSETTINGSDIR}. " \
+        f"to be the name of a YAML file in {CONFIGSETTINGSDIR}. "
     generalargs.add_argument("-cs", "--configfile-settings", \
                              type = str, \
                              required = True, \
