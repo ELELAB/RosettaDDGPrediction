@@ -48,7 +48,8 @@ def select_structure(select, \
     #-------------------------- File parsing -------------------------#
 
     
-    # if getting data about the structure from a scorefile
+    # if getting data about the structure from a scorefile in text
+    # format
     if infiletype == "scorefile_text":
         # open and parse the file
         data = util.parse_scorefile_text(scorefile = infile)
@@ -63,20 +64,25 @@ def select_structure(select, \
     # select a random structure
     if select == "random":
         struct, sdata = random.choice(data)
+    
     # select the first structure
     elif select == "first":
         struct, sdata = data[0]
+    
     # select the last structure
     elif select == "last":
         struct, sdata = data[-1]
+    
     # select the structure with the lowest associated value
     elif select == "lowest":
         struct, sdata = \
             sorted(data, key = lambda x: x[1], reverse = False)[0]
+    
     # select the structure with the highest associated value    
     elif select == "highest":
         struct, sdata = \
             sorted(data, key = lambda x: x[1], reverse = True)[0]
+    
     # select the structure whose value is closest to the mean value
     elif select == "closest_to_mean":
         # sort the data in ascending order
@@ -94,6 +100,7 @@ def select_structure(select, \
              abs(ssdata[posavg-1]-avg) < abs(ssdata[posavg+1]-avg)
         posclosest = posavg-1 if lowercloser else posavg+1
         struct, sdata = structs[posclosest], ssdata[posclosest]
+    
     # get the structure with median value
     elif select == "median":
         # sort the data in ascending order
@@ -111,8 +118,10 @@ def select_structure(select, \
         # existing instance of the value in the list)
         posclosest = posmedian-1
         struct, sdata = structs[posclosest], ssdata[posclosest]
+    
     # raise an error if an unrecognized rule was provided
     else:
         raise ValueError(f"No rule with name {select} exists.")
+    
     # return the structure
     return struct
