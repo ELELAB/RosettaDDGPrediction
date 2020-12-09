@@ -813,15 +813,17 @@ def write_dirnames2mutations(mutations, d2mfile):
 
     with open(d2mfile, "w") as out:
         # get the keys of the attributes of the mutation
-        keys = (CHAIN, WTR, NUMR, MUTR, MUTDIRNAME)
+        keys = (CHAIN, WTR, NUMR, MUTR)
         # for each mutation
         for mut in mutations:
+            # get the directory name
+            dirname = smut[MUTDIRNAME]
             # for each single mutation in the mutation (only
             # one expected since the function is used only in
             # saturation mutagenesis scans)
             for smut in mut:
                 # get the attributes of the mutation
-                chain, wtr, numr, mutr, dirname = \
+                chain, wtr, numr, mutr = \
                     operator.itemgetter(*keys)(smut)
                 # exit the loop
                 break
