@@ -1,6 +1,5 @@
 # Default settings used in rosetta_ddg_run to set up parallel runs, 
-# set the logging level and the default path where to look for Rosetta
-# executables.
+# set the logging level and how to find the Rosetta executables.
 
 
 ################################# RUN #################################

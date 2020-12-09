@@ -2,10 +2,10 @@
 
   <SCOREFXNS>
 
-    # define the unconstrained score function and set its weights
+    # define the unconstrained scoring function and set its weights
     <ScoreFunction name="sf" weights="%%scfname%%"/>
 
-    # define the constraned score function and set its weights
+    # define the constrained scoring function and set its weights
     <ScoreFunction name="sf_cst" weights="%%scfname%%">
 
       # set the weight of the atom-atom constraints in the scoring function
@@ -20,7 +20,7 @@
 
   <TASKOPERATIONS>
     # read the input resfile
-    # all residues must be set to be NATAA packable at top of resfile
+    # all residues must be set to be NATAA packable at the top of the resfile
     <ReadResfile name="res_mutate" filename="%%resfile%%"/>
   </TASKOPERATIONS>
 
@@ -61,10 +61,10 @@
     # use the multi-cool annealer for simulated annealing, set to keep a history of the 6 best rotameric states visited
     <UseMultiCoolAnnealer name="multicool" states="6"/>
 
-    # move only toward a lower cutoff for a number of neighbors within 10 A qualifying to be considered buried
+    # move towards a lower cutoff only for a number of neighbors within 10 A qualifying to be considered buried
     <ExtraChiCutoff name="extrachizero" extrachi_cutoff="0"/>
 
-    # reads command line options
+    # read command line options
     <InitializeFromCommandline name="commandline_init"/>
 
     # turn off design on selected positions
@@ -95,34 +95,27 @@
     <PackRotamersMover name="repack" scorefxn="sf" task_operations="commandline_init,repackonly,norepack,multicool"/>
     <PackRotamersMover name="mutate" scorefxn="sf" task_operations="commandline_init,res_mutate,norepack,multicool"/>
 
-    # report energy scores info to a database file
+    # report energy scores to a database file
     <ReportToDB name="dbreport" batch_description="interface_ddG" database_name="%%ddgdbfile%%">
       <ScoreTypeFeatures/>
       <ScoreFunctionFeatures scorefxn="sf"/>
       <StructureScoresFeatures scorefxn="sf"/>
     </ReportToDB>
 
-    # create a database for structural information (it is needed to reconstruct the atomic coordinates if generating output PDBs)
-    <ReportToDB name="structreport" batch_description="interface_ddG_struct" database_name="%%structdbfile%%">
-      
-      # information about the confomation in a Pose
-      <PoseConformationFeatures/>
-      
-      # data stored in a PDB format
-      <PdbDataFeatures/>
-      
+    # report structural information to a database file (it is needed to reconstruct the atomic coordinates if generating output PDBs)
+    <ReportToDB name="structreport" batch_description="interface_ddG_struct" database_name="%%structdbfile%%">    
+      # information about the confomation in a pose
+      <PoseConformationFeatures/>    
+      # data stored in PDB format
+      <PdbDataFeatures/>     
       # data associated with the job
-      <JobDataFeatures/>
-     
+      <JobDataFeatures/>   
       # information about each residue in a conformation
-      <ResidueFeatures/>
-      
+      <ResidueFeatures/>     
       # textual information associated with a pose
-      <PoseCommentsFeatures/>
-      
+      <PoseCommentsFeatures/>    
       # conformation of each protein residue
-      <ProteinResidueConformationFeatures/>
-      
+      <ProteinResidueConformationFeatures/>     
       # conformation of residues having canonical backbones but possibly noncanonical side chains
       <ResidueConformationFeatures/>
     </ReportToDB>
@@ -139,27 +132,22 @@
     <ScoreMover name="apply_score" scorefxn="sf_cst" verbose="0"/>
 
     # wrapping up in a ParsedProtocol allows the ddG calculation to take place multiple times along the backrub trajectory, if desired
-    <ParsedProtocol name="finish_ddg_post_backrub">
+    <ParsedProtocol name="finish_ddg_post_backrub">     
       <Add mover_name="save_backrub_pose"/>
       <Add mover_name="structreport"/>
-
       <Add mover_name="repack"/>
-
       <Add mover_name="addcst"/>
       <Add mover_name="minimize"/>
       <Add mover_name="clearcst"/>
       <Add mover_name="save_wt_bound_pose"/>
       <Add mover_name="structreport"/>
       <Add mover_name="restore_backrub_pose"/>
-
       <Add mover_name="mutate"/>
-
       <Add mover_name="addcst"/>
       <Add mover_name="minimize"/>
       <Add mover_name="clearcst"/>
       <Add mover_name="structreport"/>
-
-      <Add mover_name="int_ddG_mover"/>
+      <Add mover_name="int_ddG_mover"/>   
     </ParsedProtocol>
 
     # generation of a backrub trajectory
@@ -173,10 +161,8 @@
     # this mover is necessary to initialize the neighbor graph
     <Add mover_name="apply_score"/>
     <Add mover_name="neighbor_shell_storer"/>
-
     <Add mover_name="minimize"/>
     <Add mover_name="clearcst"/>
-
     <Add mover_name="backrub"/>
   </PROTOCOLS>
   <OUTPUT />

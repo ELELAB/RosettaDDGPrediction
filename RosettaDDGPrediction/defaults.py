@@ -109,9 +109,6 @@ ROSETTASCRIPTSDIR = \
 # default configuration file for data aggregation
 CONFIGAGGRFILE = os.path.join(CONFIGAGGRDIR, "aggregate.yaml")
 
-# default configuration file for run settings
-CONFIGSETTINGSFILE = os.path.join(CONFIGSETTINGSDIR, "nompi.yaml")
-
 
 
 ############################## MUTATIONS ##############################

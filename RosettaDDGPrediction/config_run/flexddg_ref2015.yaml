@@ -108,7 +108,10 @@ steps:
       -run:checkpoint: True
       # whether to write out detailed version info, if it was 
       # available at compile time
-      -run:version: true
+      -run:version: True
+      # whether to discard coordinates information for missing density
+      # atoms (whose occupancy is zero) defined in the input structure
+      -run:ignore_zero_occupancy: False
 
       #----------------------- Packing options -----------------------#
 

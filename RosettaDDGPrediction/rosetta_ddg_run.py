@@ -43,7 +43,6 @@ import yaml
 from .defaults import (
     CONFIGRUNDIR,
     CONFIGSETTINGSDIR,
-    CONFIGSETTINGSFILE,
     MUTDIRPATH,
     ROSETTAPROTOCOLS
 )
@@ -93,10 +92,9 @@ def main():
         f"Configuration file containing settings to be used for " \
         f"the run. If it is a name without extension, it is assumed " \
         f"to be the name of a YAML file in {CONFIGSETTINGSDIR}. " \
-        f"Default is {CONFIGSETTINGSFILE}."
     generalargs.add_argument("-cs", "--configfile-settings", \
                              type = str, \
-                             default = CONFIGSETTINGSFILE, \
+                             required = True, \
                              help = cs_help)
 
     r_help = "Path to the Rosetta installation directory."
