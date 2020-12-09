@@ -825,11 +825,12 @@ def write_dirnames2mutations(mutations, d2mfile):
                 # get the attributes of the mutation
                 chain, wtr, numr, mutr = \
                     operator.itemgetter(*keys)(smut)
+                # write out the directory name and the mutation
+                out.write(f"{dirname},{chain}{COMPSEP}"\
+                          f"{wtr}{COMPSEP}{numr}{COMPSEP}{mutr}\n")
                 # exit the loop
                 break
-            # write out the directory name and the mutation
-            out.write(f"{dirname},{chain}{COMPSEP}"\
-                      f"{wtr}{COMPSEP}{numr}{COMPSEP}{mutr}\n")
+
 
 
 def get_dirnames2mutations(d2mfile):
