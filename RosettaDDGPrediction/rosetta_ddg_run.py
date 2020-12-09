@@ -161,6 +161,13 @@ def main():
     nproc = args.nproc
     saturation = args.saturation
 
+    # ensure that if the saturation mutagenesis was
+    # requested, a reslistfile has been passed
+    if saturation and reslistfile is None:
+        errstr = "You requested a saturation mutagenesis " \
+                 "scan but did not provide a reslistfile."
+        sys.exit(errstr)
+
     # get the name of the configuration file for running
     # the protocol
     configrunname = \

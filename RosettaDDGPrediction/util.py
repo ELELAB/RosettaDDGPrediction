@@ -811,7 +811,7 @@ def write_dirnames2mutations(mutations, d2mfile):
     list file.
     """
 
-    with open(filename, "w") as out:
+    with open(d2mfile, "w") as out:
         # get the keys of the attributes of the mutation
         keys = (CHAIN, WTR, NUMR, MUTR, MUTDIRNAME)
         # for each mutation
