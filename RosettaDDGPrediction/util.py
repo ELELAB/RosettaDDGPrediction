@@ -817,7 +817,7 @@ def write_dirnames2mutations(mutations, d2mfile):
         # for each mutation
         for mut in mutations:
             # get the directory name
-            dirname = smut[MUTDIRNAME]
+            dirname = mut[MUTDIRNAME]
             # for each single mutation in the mutation (only
             # one expected since the function is used only in
             # saturation mutagenesis scans)
