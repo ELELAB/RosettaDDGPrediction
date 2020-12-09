@@ -599,7 +599,7 @@ def get_saturation_mutlist(poslist, reslist):
     # list of mutations
     satmutlist = []
     # for each residue position
-    for posdata, extradata in poslist:
+    for posdata, *extradata in poslist:
         # check that you have only single positions
         if len(posdata) > 1:
             errstr = "You cannot have multiple simultaneous " \
