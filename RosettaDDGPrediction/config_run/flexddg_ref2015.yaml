@@ -55,7 +55,7 @@ mutations:
   # energy of the single chains.
   extra: !!seq ["_chaintomove_"]
   # number of structures to be generated for each mutation
-  nstruct: 3
+  nstruct: 35
 
 # options regarding saturation mutagenesis scans
 saturation:
