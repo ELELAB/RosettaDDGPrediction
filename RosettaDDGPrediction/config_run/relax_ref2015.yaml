@@ -27,35 +27,6 @@ pdb:
   allow_no_chain_ids: true
 
 
-#--------------------- MUTATIONS-RELATED OPTIONS ---------------------#
-
-
-# options regarding how mutations are defined in the mutations list
-# file
-mutations:
-  # which kind of residue numbering is used in defining mutations
-  # ("pose" for cartddg protocols since the 'mutfile' format used
-  # by them requires residue numbering to be consistent with the
-  # Rosetta pose numbering)
-  resnumbering: pose
-  # extra data associated with each mutation. For cartddg protocols,
-  # there are no extra data.
-  extra: !!null
-  # number of structures to be generated for each mutation. It is
-  # set to 'null' for cartddg protocols since they do generate 
-  # multiple structures but the option must be given as a
-  # Rosetta option (see -ddg:iterations below).
-  nstruct: !!null
-
-# options regarding saturation mutagenesis scans
-saturation:
-  # file mapping the names of the directories that will contain
-  # data for the mutations to the mutations themselves as specified
-  # in the mutations' list file. Will be written at the end of
-  # the run.
-  d2mfile: dirnames2mutations.txt
-
-
 #--------------------------- PROTOCOL STEPS --------------------------#
 
 
