@@ -138,9 +138,9 @@ def main():
                          help = saturation_help)
 
     reslistfile_help = \
-        f"File containing the list of residue types (one-letter " \
-        f"name) to be included in the saturation mutagenesis. " \
-        f"It is used only if --saturation is provided."
+        "File containing the list of residue types to be included " \
+        "in the saturation mutagenesis It is used only if " \
+        "--saturation is provided."
     satargs.add_argument("--reslistfile", \
                          type = str, \
                          default = None, \
@@ -525,9 +525,9 @@ def main():
                                       pdbfile = pdbfile, 
                                       struct = struct).result()
                 # if something went wrong, report the error and exit
-                except:
-                    errstr = f"Could not get the PDB name of " \
-                             f"the selected structure: {e}"
+                except Exception as e:
+                    errstr = f"Could not get the name of the PDB " \
+                             f"of the selected structure: {e}"
                     sys.exit(errstr)
 
                 # get the path to the PDB file

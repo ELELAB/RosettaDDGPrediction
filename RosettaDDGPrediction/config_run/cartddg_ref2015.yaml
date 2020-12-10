@@ -171,7 +171,7 @@ steps:
     wd: cartesian
     # name of the flags file(s) that will be written and used
     # to run the step
-    flagfile: flags.txt
+    flagsfile: flags.txt
     # name of the Rosetta output file(s) that will be written
     output: cartesian.out
     # Rosetta options to be used in conjunction with the Rosetta
