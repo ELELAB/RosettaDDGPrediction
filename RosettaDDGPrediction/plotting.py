@@ -332,8 +332,12 @@ def set_axis(ax, \
     """Set up the x- or y-axis."""
     
     if ticks is None:
-        # default to the tick locations already present
-        ticks = plt.xticks()[0]
+        if axis == "x":
+            # default to the tick locations already present
+            ticks = plt.xticks()[0]
+        elif axis == "y":
+            # default to the tick locations already present
+            ticks = plt.yticks()[0]
     
     if ticklabels is None:
         # default to the string representations
@@ -439,7 +443,7 @@ def plot_total_heatmap(df, \
                                 columns = MUTR, \
                                 values = totscorecol).transpose()
         # y-axis tick labels will be the row names
-        yticklabels = finaldf.index.values
+        yticklabels = finaldf.index.values.tolist()
         # set y-axis ticks to None so that ticks are
         # automatically placed
         yticks = None
@@ -455,7 +459,7 @@ def plot_total_heatmap(df, \
         yticks, yticklabels = [], []
 
     # x-axis tick labels will be the column names
-    xticklabels = finaldf.columns.values
+    xticklabels = finaldf.columns.values.tolist()
     # flatten the array so that we are dealing only with
     # a list of values
     values = finaldf.values.flatten()

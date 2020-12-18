@@ -839,7 +839,7 @@ def get_dirnames2mutations(d2mfile):
     as in the mutations' list file.
     """
 
-    with open(filename, "r") as f:
+    with open(d2mfile, "r") as f:
         # create an empty list to store directory 
         # names and mutations
         dirnames2mutations = []
