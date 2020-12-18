@@ -804,33 +804,32 @@ def get_mutations(listfile, \
     return mutations
 
 
-def write_dirnames2mutations(mutations, d2mfile):
+def write_dirnames2mutations(mutations, outdir, d2mfile):
     """Write a comma-separated file mapping the name of
     each directory containing data for a mutation to the
     mutation itself, represented as in the mutations'
     list file.
     """
 
-    with open(d2mfile, "w") as out:
+    # set the path to the output file
+    d2mfilepath = os.path.join(outdir, d2mfile)
+
+    # make sure that the directory exists. If not, create it.
+    os.makedirs(outdir, exist_ok = True)
+
+    with open(d2mfilepath, "w") as out:
         # get the keys of the attributes of the mutation
         keys = (CHAIN, WTR, NUMR, MUTR)
         # for each mutation
         for mut in mutations:
             # get the directory name
             dirname = mut[MUTDIRNAME]
-            # for each single mutation in the mutation (only
-            # one expected since the function is used only in
-            # saturation mutagenesis scans)
-            for smut in mut[MUT]:
-                # get the attributes of the mutation
-                chain, wtr, numr, mutr = \
-                    operator.itemgetter(*keys)(smut)
-                # write out the directory name and the mutation
-                out.write(f"{dirname},{chain}{COMPSEP}"\
-                          f"{wtr}{COMPSEP}{numr}{COMPSEP}{mutr}\n")
-                # exit the loop
-                break
-
+            # get the attributes of the mutation
+            chain, wtr, numr, mutr = \
+                operator.itemgetter(*keys)(mut[MUT][0])
+            # write out the directory name and the mutation
+            out.write(f"{dirname},{chain}{COMPSEP}"\
+                      f"{wtr}{COMPSEP}{numr}{COMPSEP}{mutr}\n")
 
 
 def get_dirnames2mutations(d2mfile):

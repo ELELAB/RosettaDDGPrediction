@@ -385,6 +385,17 @@ def main():
             # if it is a ΔΔG prediction step
             elif role == "ddg":
 
+                # if it is a saturation mutagenesis scan
+                if saturation:
+                    
+                    # write out the file mapping the directory
+                    # names to the mutations
+                    futures.append(\
+                        client.submit(util.write_dirnames2mutations, \
+                                      mutations = mutations, \
+                                      outdir = stepwd, \
+                                      **options.get("saturation")))
+
                 # for each mutation
                 for mut in mutations:
                     
@@ -474,16 +485,6 @@ def main():
                                       mpinproc = 1, \
                                       wd = mutwd, \
                                       **settings["mpi"]))
-
-
-                # if it is a saturation mutagenesis scan
-                if saturation:
-                    
-                    # write out the file mapping the directory
-                    # names to the mutations
-                    client.submit(util.write_dirnames2mutations, \
-                                  mutations = mutations, \
-                                  **options.get("saturation"))
 
       
         # if the step is run by Python
