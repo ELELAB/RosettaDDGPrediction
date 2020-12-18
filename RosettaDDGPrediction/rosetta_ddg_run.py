@@ -297,7 +297,7 @@ def main():
 
     
     # create an empty list to keep track of the running futures
-    futures = []  
+    futures = [] 
 
     
     # for each step of the protocol that has to be run
@@ -327,8 +327,14 @@ def main():
             # get the executable needed to run the step
             executable = stepfeatures["executable"]
 
-            # set the working directory where the step will be run
-            stepwd = os.path.join(rundir, step["wd"])
+            # if the specified directory was "."
+            if step["wd"] == ".":
+                # run in the current directory without generating
+                # a sub-directory for the current step
+                stepwd = rundir
+            else:
+                # set a new directory
+                stepwd = os.path.join(rundir, step["wd"])
 
             # try to get the Rosetta executable
             try:

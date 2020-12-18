@@ -209,8 +209,7 @@ def main():
     if family == "cartddg":
         
         # get the directory where the ΔΔG calculation step was run
-        rundir = os.path.join(rundir, \
-                              configrun["steps"]["cartesian"]["wd"])
+        steprundir = configrun["steps"]["cartesian"]["wd"]
         
         # get the Rosetta options
         options = configrun["steps"]["cartesian"]["options"]
@@ -230,8 +229,7 @@ def main():
     elif family == "flexddg":
 
         # get the directory where the ΔΔG calculation step was run
-        rundir = os.path.join(rundir, \
-                              configrun["steps"]["flexddg"]["wd"])
+        steprundir = configrun["steps"]["flexddg"]["wd"]
         
         # get the Rosetta options
         options = configrun["steps"]["flexddg"]["options"]
@@ -279,19 +277,33 @@ def main():
     listcontributions = configaggr["energy_contributions"][scfname]
     
     # get the conversion factor for the scoring function used
-    convfact = configaggr["conversion_factors"][scfname]  
+    convfact = configaggr["conversion_factors"][scfname]
+
+
+    # if the specified directory was "."
+    if steprundir == ".":
+        # the outputs were generated in the current working
+        # directory 
+        steprundir = rundir
+    else:
+        # the outputs were generated in a sub-directory
+        steprundir = os.path.join(rundir, steprundir)
   
-    # all non-hidden directories in the running directory
-    # will be considered of interest
-    mutnames = [d for d in os.listdir(rundir) \
-                if not d.startswith(".")]
+    # all non-hidden directories that are not the output
+    # directory (in case the output directory is also in
+    # the running directory) will be considered as
+    # directories representing mutations performed
+    mutnames = [d for d in os.listdir(steprundir) \
+                if (os.path.isdir(d) \
+                    and not d.startswith(".") \
+                    and os.path.basename(d) != outdir)]
 
 
     # for each mutation
     for mutname in mutnames:
         
         # mutation directory path
-        mutpath = os.path.join(rundir, mutname)
+        mutpath = os.path.join(steprundir, mutname)
 
         # if the protocol is a cartddg protocol
         if family == "cartddg":
