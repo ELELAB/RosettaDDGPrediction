@@ -153,6 +153,8 @@ def main():
     except Exception as e:
         errstr = f"Could not parse the configuration file " \
                  f"{configfilerun}: {e}"
+        log.error(errstr)
+        sys.exit(1)
     
     # try to get the configuration for data aggregation from the
     # corresponding configuration file
@@ -162,6 +164,8 @@ def main():
     except Exception as e:
         errstr = f"Could not parse the configuration file " \
                  f"{configfileaggr}: {e}"
+        log.error(errstr)
+        sys.exit(1)
 
     # get family of the protocol
     family = configrun["family"]
@@ -284,17 +288,17 @@ def main():
     if steprundir == ".":
         # the outputs were generated in the current working
         # directory 
-        steprundir = rundir
+        steprundirpath = rundir
     else:
         # the outputs were generated in a sub-directory
-        steprundir = os.path.join(rundir, steprundir)
+        steprundirpath = os.path.join(rundir, steprundir)
   
     # all non-hidden directories that are not the output
     # directory (in case the output directory is also in
     # the running directory) will be considered as
     # directories representing mutations performed
-    mutnames = [d for d in os.listdir(steprundir) \
-                if (os.path.isdir(d) \
+    mutnames = [d for d in os.listdir(steprundirpath) \
+                if (os.path.isdir(os.path.join(steprundirpath, d)) \
                     and not d.startswith(".") \
                     and os.path.basename(d) != outdir)]
 
@@ -303,7 +307,7 @@ def main():
     for mutname in mutnames:
         
         # mutation directory path
-        mutpath = os.path.join(steprundir, mutname)
+        mutpath = os.path.join(steprundirpath, mutname)
 
         # if the protocol is a cartddg protocol
         if family == "cartddg":
