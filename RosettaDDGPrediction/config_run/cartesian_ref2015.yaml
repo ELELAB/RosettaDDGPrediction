@@ -98,7 +98,7 @@ steps:
       -run:checkpoint: True
       # whether to write out detailed version info, if it was 
       # available at compile time
-      -run:version: true
+      -run:version: True
 
       #----------------------- Packing options -----------------------#
 
@@ -110,14 +110,14 @@ steps:
       #------------------------- DDG options -------------------------#
 
       # whether to toggle on Cartesian mode
-      -ddg:cartesian: true
+      -ddg:cartesian: True
       # number of iterations of refinement
       -ddg:iterations: 3
       # how many (sequence) neighbors should be included in the 
       # backbone minimization (Rosetta default is 1)
       -ddg:bbnbrs: 1
       # whether or not to dump repacked wild-type and mutant pdbs
-      -ddg:dump_pdbs: true
+      -ddg:dump_pdbs: True
       # name of the mutfile specifying the mutation
       -ddg:mut_file: mutation.mutfile
       # output file of predicted ΔΔGs

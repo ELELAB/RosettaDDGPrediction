@@ -20,11 +20,11 @@ pdb:
   # whether PDB files containing multiple chains are allowed
   # (false for cartddg protocols since they are used to predict
   # the ΔΔG of stability of monomeric proteins)
-  allow_multi_chains: false
+  allow_multi_chains: False
   # whether PDB files with chain IDs missing are allowed
   # (true for cartddg protocols since chain IDs are not necessary,
   # because they only deal with monomeric proteins)
-  allow_no_chain_ids: true
+  allow_no_chain_ids: True
 
 
 #--------------------------- PROTOCOL STEPS --------------------------#
@@ -80,17 +80,17 @@ steps:
       #------------------------- Run options -------------------------#
       
       # discard coordinate information for missing density atoms
-      -run:ignore_zero_occupancy: false
+      -run:ignore_zero_occupancy: False
       # whether to use checkpointing
       -run:checkpoint: True
       # whether to write out detailed version info, if it was 
       # available at compile time
-      -run:version: true
+      -run:version: True
 
       #----------------------- Packing options -----------------------#
       
       # whether to use rotamers from input structure in packing 
-      -packing:use_input_sc: true
+      -packing:use_input_sc: True
       # file containing extra residue types to be included in the
       # packing palette. 'null' if no file is specified (you can
       # also comment out the option).
@@ -100,13 +100,13 @@ steps:
       
       # tether backbone coordinates of the relaxed structures to the
       # coordinates in the initial structure
-      -relax:constrain_relax_to_start_coords: true
+      -relax:constrain_relax_to_start_coords: True
       # tether sidechain heavy atom coordinates
-      -relax:coord_constrain_sidechains: true
+      -relax:coord_constrain_sidechains: True
       # type of minimizer to be used
       -relax:min_type: lbfgs_armijo_nonmonotone
       # whether to use the Cartesian minimizer
-      -relax:cartesian: true
+      -relax:cartesian: True
       # relax script to be used
       -relax:script: MonomerRelax2019
 
@@ -118,4 +118,4 @@ steps:
       #--------------------- Corrections options ---------------------#
 
       # use the talaris score function and residue_type_set
-      -corrections:restore_talaris_behavior: true
+      -corrections:restore_talaris_behavior: True
