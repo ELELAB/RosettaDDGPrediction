@@ -822,7 +822,7 @@ def write_dirnames2mutations(mutations, outdir, d2mfile):
         # so that you do not write them more than once
         # (they will be repeated in a list of mutations
         # performed on multiple structures)
-        mutdirnames = {}
+        mutdirnames = set()
         # get the keys of the attributes of the mutation
         keys = (CHAIN, WTR, NUMR, MUTR)
         # for each mutation
