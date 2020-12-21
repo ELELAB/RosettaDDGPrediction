@@ -818,18 +818,27 @@ def write_dirnames2mutations(mutations, outdir, d2mfile):
     os.makedirs(outdir, exist_ok = True)
 
     with open(d2mfilepath, "w") as out:
+        # store the mutations' directory names written
+        # so that you do not write them more than once
+        # (they will be repeated in a list of mutations
+        # performed on multiple structures)
+        mutdirnames = {}
         # get the keys of the attributes of the mutation
         keys = (CHAIN, WTR, NUMR, MUTR)
         # for each mutation
         for mut in mutations:
             # get the directory name
             dirname = mut[MUTDIRNAME]
-            # get the attributes of the mutation
-            chain, wtr, numr, mutr = \
-                operator.itemgetter(*keys)(mut[MUT][0])
-            # write out the directory name and the mutation
-            out.write(f"{dirname},{chain}{COMPSEP}"\
-                      f"{wtr}{COMPSEP}{numr}{COMPSEP}{mutr}\n")
+            # if the directory has not been created yet
+            if not dirname in mutdirnames:              
+                # get the attributes of the mutation
+                chain, wtr, numr, mutr = \
+                    operator.itemgetter(*keys)(mut[MUT][0])
+                # write out the directory name and the mutation
+                out.write(f"{dirname},{chain}{COMPSEP}"\
+                          f"{wtr}{COMPSEP}{numr}{COMPSEP}{mutr}\n")
+                # add the directory name to the set
+                mutdirnames.add(mutdirname)
 
 
 def get_dirnames2mutations(d2mfile):
