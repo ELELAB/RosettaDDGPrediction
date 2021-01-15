@@ -56,13 +56,10 @@ mutations:
   extra: !!seq ["_chaintomove_"]
   # number of structures to be generated for each mutation
   nstruct: 35
-
-# options regarding saturation mutagenesis scans
-saturation:
   # file mapping the names of the directories that will contain
   # data for the mutations to the mutations themselves as specified
   # in the mutations' list file
-  d2mfile: dirnames2mutations.txt
+  mutinfofile: mutinfo.txt
 
 
 #--------------------------- PROTOCOL STEPS --------------------------#
@@ -74,6 +71,9 @@ steps:
   flexddg:
     # name of the working directory where the step will be run
     wd: "flexddg"
+    # whether (and how) to remove unnecessary files at the end
+    # of the run
+    cleanlevel: !!null
     # name of the flag file(s) that will be written and used
     # to run the step
     flagsfile: "flags.txt"

@@ -35,6 +35,9 @@ steps:
   relax:
     # name of the working directory where the step will be run
     wd: relax
+    # whether (and how) to remove unnecessary files at the end
+    # of the run
+    cleanlevel: !!null
     # name of the flags file(s) that will be written and used
     # to run the step
     flagsfile: flags.txt

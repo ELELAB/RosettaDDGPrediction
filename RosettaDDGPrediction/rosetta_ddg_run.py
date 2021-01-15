@@ -32,6 +32,7 @@
 
 # standard library
 import argparse
+import logging as log
 import os
 import os.path
 import sys
@@ -40,6 +41,7 @@ import dask
 from distributed import Client, LocalCluster
 import yaml
 # RosettaDDGProtocols
+from . import cleaning
 from .defaults import (
     CONFIGRUNDIR,
     CONFIGSETTINGSDIR,
@@ -210,6 +212,7 @@ def main():
     except Exception as e:
         errstr = f"Could not parse the configuration file " \
                  f"{configfilesettings}: {e}"
+        log.error(errstr)
         sys.exit(errstr)
 
     # create the local cluster
@@ -233,6 +236,7 @@ def main():
     except Exception as e:
         errstr = f"Could not parse the configuration " \
                  f"file {configfilerun}: {e}"
+        log.error(errstr)
         sys.exit(errstr)
 
     
@@ -269,22 +273,34 @@ def main():
     # if something went wrong, report it and exit
     except Exception as e:
         errstr = f"Could not load the PDB file {pdbfile}: {e}"
+        log.error(errstr)
         sys.exit(errstr)
     
     
     # if the file with the list of mutations was passed
     if listfile:
+        
+        # get the mutations options
+        mutoptions = options["mutations"]
+        
         # try to generate the list of mutations
         try:
-            mutations = client.submit(util.get_mutations, \
-                                      listfile = listfile, \
-                                      reslistfile = reslistfile, \
-                                      pdbfile = currpdbfile, \
-                                      **options["mutations"]).result()
+            mutations = \
+                client.submit(\
+                    util.get_mutations, \
+                        listfile = listfile, \
+                        reslistfile = reslistfile, \
+                        pdbfile = currpdbfile, \
+                        resnumbering = mutoptions["resnumbering"], \
+                        extra = mutoptions["extra"], \
+                        nstruct = mutoptions["nstruct"])
+        
         # if something went wrong, report it and exit
         except Exception as e:
             errstr = f"Could not generate the list of mutations: {e}"
+            log.error(errstr)
             sys.exit(errstr)
+    
     # otherwise
     else:
         # no mutations will be performed
@@ -303,7 +319,6 @@ def main():
     # for each step of the protocol that has to be run
     for stepname, step in steps.items():
 
-
         # if there are still pending futures from the previous step
         if futures:
             # gather them
@@ -316,6 +331,9 @@ def main():
 
         # get the step features
         stepfeatures = ROSETTAPROTOCOLS[family][stepname]
+
+        # get the step cleaning level
+        cleanlevel = step["cleanlevel"]
 
 
         # if the step is run via Rosetta commands
@@ -343,10 +361,12 @@ def main():
                                   execname = executable, \
                                   execpath = execpath, \
                                   execsuffix = execsuffix)
+            
             # if something went wrong, report it and exit
             except Exception as e:
                 errstr = f"Could not get Rosetta executable " \
                          f"'{executable}' from {execpath}."
+                log.error(errstr)
                 sys.exit(errstr)
 
         
@@ -372,29 +392,46 @@ def main():
                 # if MPI is available, since there is no need for
                 # parallelization over the mutations (it is a
                 # processing step).
-                futures.append(\
-                    client.submit(util.run_rosetta, \
-                                  executable = executable, \
-                                  flagsfile = flagsfile, \
-                                  output = output, \
-                                  mpinproc = nproc, \
-                                  wd = stepwd, \
-                                  **settings["mpi"]))
+                try:
+                    process = client.submit(util.run_rosetta, \
+                                            executable = executable, \
+                                            flagsfile = flagsfile, \
+                                            output = output, \
+                                            mpinproc = nproc, \
+                                            wd = stepwd, \
+                                            **settings["mpi"])
+               
+                # if something went wrong, report it and exit
+                except Exception as e:
+                    errstr = f"'{stepname}' run in {stepwd} exited " \
+                             f"with code {process["returncode"]}. " \
+                             f"The following exception occurred: {e}"
+                    log.errstr(errstr)
+                    sys.exit(errstr)
+
+                # submit also the post-run cleaning
+                futures.append(cleaning.clean_folders, \
+                               process = process, \
+                               step = stepname, \
+                               wd = stepwd, \
+                               options = stepopts, \
+                               level = cleanlevel)
 
           
             # if it is a ΔΔG prediction step
             elif role == "ddg":
 
-                # if it is a saturation mutagenesis scan
-                if saturation:
-                    
-                    # write out the file mapping the directory
-                    # names to the mutations
-                    futures.append(\
-                        client.submit(util.write_dirnames2mutations, \
-                                      mutations = mutations, \
-                                      outdir = stepwd, \
-                                      **options.get("saturation")))
+                # write out the file mapping the directory
+                # names to the mutations
+                futures.append(\
+                    client.submit(util.write_mutinfofile, \
+                                  mutations = mutations, \
+                                  outdir = stepwd, \
+                                  mutinfofile = mutoptions["mutinfofile"]))
+
+                # log the order in which the mutations will be performed
+                logstr = f"The following mutations will be " \
+                         f"performed:\n{'\n'.join(mutations)}."
 
                 # for each mutation
                 for mut in mutations:
@@ -469,22 +506,40 @@ def main():
                     
                     # write the flagsfile
                     flagsfile = client.submit(util.write_flagsfile, \
-                                             options = optsmut, \
-                                             flagsfile = flagsfile)
+                                              options = optsmut, \
+                                              flagsfile = flagsfile)
+
 
                     # submit the calculation
                     # NB: only one MPI process will be used if MPI is
                     # available since there is no gain in using MPI
                     # with cartesian_ddg or the Flex ddG procedure.
                     # The parallelization is done over the mutations.
-                    futures.append(\
-                        client.submit(util.run_rosetta, \
-                                      executable = executable, \
-                                      flagsfile = flagsfile, \
-                                      output = output, \
-                                      mpinproc = 1, \
-                                      wd = mutwd, \
-                                      **settings["mpi"]))
+                    try:
+                        process = client.submit(util.run_rosetta, \
+                                                executable = executable, \
+                                                flagsfile = flagsfile, \
+                                                output = output, \
+                                                mpinproc = 1, \
+                                                wd = mutwd, \
+                                                **settings["mpi"])
+                    
+                    # if something went wrong, report it and exit
+                    except Exception as e:
+                        errstr = f"'{stepname}' run in {stepwd} exited " \
+                                 f"with code {process["returncode"]}. " \
+                                 f"The following exception occurred: {e}"
+                        # log the error and exit
+                        log.errstr(errstr)
+                        sys.exit(errstr)
+
+                    # submit also the post-run cleaning
+                    futures.append(cleaning.clean_folders, \
+                                   process = process, \
+                                   step = stepname, \
+                                   wd = mutwd, \
+                                   options = optsmut, \
+                                   level = cleanlevel)
 
       
         # if the step is run by Python
@@ -513,10 +568,12 @@ def main():
                                       infile = infile, \
                                       infiletype = infiletype, \
                                       select = select)
-                # if something goes wrong, report it and exit
+                
+                # if something went wrong, report it and exit
                 except Exception as e:
                     errstr = f"Could not not perform the " \
                              f"structure selection: {e}"
+                    log.error(errstr)
                     sys.exit(errstr)
                 
                 # get the name of the current PDB file
@@ -535,6 +592,7 @@ def main():
                 except Exception as e:
                     errstr = f"Could not get the name of the PDB " \
                              f"of the selected structure: {e}"
+                    log.error(errstr)
                     sys.exit(errstr)
 
                 # get the path to the PDB file

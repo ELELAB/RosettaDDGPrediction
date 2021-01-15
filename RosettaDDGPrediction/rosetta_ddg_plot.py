@@ -95,16 +95,11 @@ def main():
                         required = True, 
                         help = cp_help)
 
-    d2m_help = "File mapping the names of the directories " \
-               "containing mutations included in a saturation " \
-               "mutagenesis scan to the mutations themselves, " \
-               "represented as in the mutations' list file " \
-               "used to perform the scan. Required only if " \
-               "the plot is total_heatmap_saturation." 
-    parser.add_argument("-d2m", "--d2mfile", \
+    mf_help = "File with info about the mutations (it " \
+              "is created when running)." 
+    parser.add_argument("-mf", "--mutinfofile", \
                         type = str, \
-                        default = None, \
-                        help = d2m_help)
+                        help = mf_help)
 
 
     # parse the arguments
@@ -112,7 +107,7 @@ def main():
     # files
     infile = util.get_abspath(args.infile)
     outfile = util.get_abspath(args.outfile)
-    d2mfile = util.get_abspath(args.d2mfile)
+    mutinfofile = util.get_abspath(args.mutinfofile)
     # configuration files
     configfileplot = args.configfile_plot
     configfileaggr = args.configfile_aggregate
@@ -211,14 +206,15 @@ def main():
         # if the plot is a heatmap of total scores
         if plottype == "total_heatmap":
             ax = plotting.plot_total_heatmap(df = df, \
-                                             config = config)
+                                             config = config, \
+                                             mutinfofile = mutinfofile)
 
         # if the plot is a heatmap for a saturation mutagenesis scan
         elif plottype == "total_heatmap_saturation":
             ax = plotting.plot_total_heatmap(df = df, \
                                              config = config, \
                                              saturation = True, \
-                                             d2mfile = d2mfile)
+                                             mutinfofile = mutinfofile)
 
         # if the plot is a barplot dividing the total ΔΔG score
         # into its energy contributions
@@ -227,13 +223,15 @@ def main():
             ax = plotting.plot_contributions_barplot(\
                                     df = df, \
                                     config = config, \
-                                    contributions = contributions)
+                                    contributions = contributions, \
+                                    mutinfofile = mutinfofile)
 
         # if the plot is a swarmplot showing the distributions of
         # total ΔG scores for all wild-type and mutant structures
         elif plottype == "dg_swarmplot":
             ax = plotting.plot_dg_swarmplot(df = df, \
-                                            config = config)
+                                            config = config, \
+                                            mutinfofile = mutinfofile)
 
         # if another plot type was passed, report it and exit
         else:

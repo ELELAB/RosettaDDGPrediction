@@ -67,6 +67,15 @@ def main():
                         required = True, \
                         help = cr_help)
 
+    cs_help = \
+        f"Configuration file containing settings to be used for " \
+        f"the run. If it is a name without extension, it is assumed " \
+        f"to be the name of a YAML file in {CONFIGSETTINGSDIR}. "
+    generalargs.add_argument("-cs", "--configfile-settings", \
+                             type = str, \
+                             required = True, \
+                             help = cs_help)
+
     ca_help = f"Configuration file for data aggregation. " \
               f"If it is a name without extension, it is assumed " \
               f"to be the name of a YAML file in {CONFIGAGGRDIR}. " \
@@ -91,20 +100,33 @@ def main():
                         default = os.getcwd(), \
                         help = od_help)
 
+    mf_help = "File with info about the mutations (it " \
+              "is created when running)." 
+    parser.add_argument("-mf", "--mutinfofile", \
+                        type = str, \
+                        help = mf_help)
+
     # parse the arguments
     args = parser.parse_args()
     
     # configuration files
     configfilerun = args.configfile_run
+    configfilesettings = args.configfile_settings
     configfileaggr = args.configfile_aggregate
     # directories
     rundir = args.running_dir
     outdir = args.output_dir
+    # other files
+    mutinfofile = util.get_abspath(args.mutinfofile)
 
     # get the name of the configuration file for running
     # the protocol
     configrunname = \
         os.path.basename(configfilerun).rstrip(".yaml")
+    # get the name of the configuration file for the
+    # running options
+    configsettingsname = \
+        os.path.basename(configfilesettings).rstrip(".yaml")
     # get the name of the configuration file for data
     # aggregation
     configaggrname = \
@@ -121,6 +143,16 @@ def main():
         configfilerun = util.get_abspath(configfilerun)
 
     # if the configuration file is a name without extension
+    if configfilesettings == configsettingsname:
+        # assume it is a configuration file in the directory
+        # storing configuration files for run settings
+        configfilesettings = os.path.join(CONFIGSETTINGSDIR, \
+                                          configsettingsname + ".yaml")
+    # otherwise assume it is a file name/file path
+    else:
+        configfilesettings = util.get_abspath(configfilesettings)
+
+    # if the configuration file is a name without extension
     if configfileaggr == configaggrname:
         # assume it is a file in the directory where
         # configuration files for data aggregation are stored
@@ -132,12 +164,26 @@ def main():
 
 
 
-    ############################# LOGGING #############################
+    ############################## CLIENT #############################
 
 
 
-    # logging configuration
-    log.basicConfig(level = log.INFO)
+    # try to get the run settings from the default YAML file
+    try:
+        settings = yaml.safe_load(open(configfilesettings, "r"))
+    # if something went wrong, report it and exit
+    except Exception as e:
+        errstr = f"Could not parse the configuration file " \
+                 f"{configfilesettings}: {e}"
+        log.error(errstr)
+        sys.exit(errstr)
+
+    # create the local cluster
+    cluster = LocalCluster(n_workers = nproc, \
+                           **settings["localcluster"])
+    
+    # open the client from the cluster
+    client = Client(cluster)
 
 
 
@@ -154,7 +200,7 @@ def main():
         errstr = f"Could not parse the configuration file " \
                  f"{configfilerun}: {e}"
         log.error(errstr)
-        sys.exit(1)
+        sys.exit(errstr)
     
     # try to get the configuration for data aggregation from the
     # corresponding configuration file
@@ -165,7 +211,7 @@ def main():
         errstr = f"Could not parse the configuration file " \
                  f"{configfileaggr}: {e}"
         log.error(errstr)
-        sys.exit(1)
+        sys.exit(errstr)
 
     # get family of the protocol
     family = configrun["family"]
@@ -292,22 +338,26 @@ def main():
     else:
         # the outputs were generated in a sub-directory
         steprundirpath = os.path.join(rundir, steprundir)
-  
-    # all non-hidden directories that are not the output
-    # directory (in case the output directory is also in
-    # the running directory) will be considered as
-    # directories representing mutations performed
-    mutnames = [d for d in os.listdir(steprundirpath) \
-                if (os.path.isdir(os.path.join(steprundirpath, d)) \
-                    and not d.startswith(".") \
-                    and os.path.basename(d) != outdir)]
+ 
+
+    # get info about the mutations
+    try:
+        mutinfo = client.submit(util.get_mutinfo, \
+                                mutinfofile = mutinfofile).result()
+    # if something went wrong, report it and exit
+    except Exception as e:
+        errstr = f"Could not load mutations info from " \
+                 f"{mutinfofile}: {e}"
+        log.error(errstr)
+        sys.exit(errstr)
 
 
     # for each mutation
-    for mutname in mutnames:
+    for mutname, dirname in zip(mutinfo[ROSETTADFCOLS["mutname"]], \
+                                mutinfo[ROSETTADFCOLS["dirname"]]):
         
         # mutation directory path
-        mutpath = os.path.join(steprundirpath, mutname)
+        mutpath = os.path.join(steprundirpath, dirname)
 
         # if the protocol is a cartddg protocol
         if family == "cartddg":
@@ -317,7 +367,8 @@ def main():
             
             # try to parse the output file
             try:
-                df = aggregation.parse_output_cartddg(\
+                df = client.submit(\
+                        aggregation.parse_output_cartddg, \
                         ddgout = ddgout, \
                         listcontributions = listcontributions, \
                         scfname = scfname)
@@ -328,14 +379,17 @@ def main():
             
             # try to get the aggregated dataframes          
             try:
-                dfs = aggregation.aggregate_data_cartddg(\
+                dfs = \
+                    client.submit(\
+                        aggregation.aggregate_data_cartddg(\
                         df = df, \
-                        listcontributions = listcontributions)
+                        listcontributions = listcontributions)).result()
             # if something went wrong, report it and exit
             except Exception as e:
-                log.error(f"Could not aggregate data for " \
-                          f"{os.path.basename(mutpath)}: {e}")
-                sys.exit(1)
+                errstr = f"Could not aggregate data for " \
+                         f"{os.path.basename(mutpath)}: {e}"
+                log.error(errstr)
+                sys.exit(errstr)
         
         
         # if the protocol is a flexddg protocol
@@ -353,11 +407,12 @@ def main():
                 db3out = os.path.join(structpath, outname)
                 # try to create a dataframe from the .db3 output file
                 try:
-                    df = aggregation.parse_output_flexddg(\
+                    df = client.submit(\
+                            aggregation.parse_output_flexddg(\
                             db3out = db3out, \
                             trajstride = trajstride, \
                             structnum = structnum, \
-                            scfname = scfname)
+                            scfname = scfname))
                 # if something went wrong, report it and continue
                 except Exception as e:
                     log.warning(f"Could not parse {db3out}: {e}")
@@ -368,14 +423,17 @@ def main():
 
             # try to generate the aggregated dataframes            
             try:
-                dfs = aggregation.aggregate_data_flexddg(\
+                dfs = \
+                    client.submit(\
+                        aggregation.aggregate_data_flexddg(\
                         df = pd.concat(structdfs), \
-                        listcontributions = listcontributions)
+                        listcontributions = listcontributions)).result()
             # if something went wrong, report it and exit
             except Exception as e:
-                log.error(f"Could not aggregate data for " \
-                          f"{os.path.basename(mutpath)}: {e}")
-                sys.exit(1)
+                errstr = f"Could not aggregate data for " \
+                         f"{os.path.basename(mutpath)}: {e}"
+                log.error(errstr)
+                sys.exit(errstr)
 
         
         # separate the dataframes with the wild-type ΔG, the
@@ -385,27 +443,32 @@ def main():
 
         # try to generate the aggregated and all-structures dataframes
         try:
-            aggrdf, structdf = aggregation.generate_output_dataframes(\
-                                dgwt = dgwt, \
-                                dgmut = dgmut, \
-                                ddg = ddg, \
-                                mutname = mutname, \
-                                rescale = rescale, \
-                                listcontributions = listcontributions, \
-                                convfact = convfact)
+            aggrdf, structdf = \
+                client.submit(\
+                    aggregation.generate_output_dataframes(\
+                    dgwt = dgwt, \
+                    dgmut = dgmut, \
+                    ddg = ddg, \
+                    mutname = mutname, \
+                    rescale = rescale, \
+                    listcontributions = listcontributions, \
+                    convfact = convfact)).result()
         # if something went wrong, report it and exit
         except Exception as e:
-            log.error(f"Could not generate output dataframes: {e}")
-            sys.exit(1)
+            errstr = f"Could not generate output dataframes: {e}"
+            log.error(errstr)
+            sys.exit(errstr)
 
 
         # save the aggregated dataframe
-        aggrdf.to_csv(os.path.join(outdir, mutname + oasuffix), \
-                      **dfsoptions)
+        aggrdfpath = os.path.join(outdir, mutname + oasuffix)
+        client.submit(aggrdf.to_csv(aggrdfpath, \
+                                    **dfsoptions))
 
         # save the all-structures dataframe
-        structdf.to_csv(os.path.join(outdir, mutname + ossuffix), \
-                        **dfsoptions)
+        structdfpath = os.path.join(outdir, mutname + ossuffix)
+        client.submit(structdf.to_csv(structdfpath, \
+                                      **dfsoptions))
         
         # add the dataframes to the lists of all-mutations dataframes
         mutaggrdfs.append(aggrdf)
@@ -417,8 +480,11 @@ def main():
     mutstructdf = pd.concat(mutstructdfs)
     
     # save the dataframes with data for all the mutations
-    mutaggrdf.to_csv(os.path.join(outdir, mutaggr), **dfsoptions)
-    mutstructdf.to_csv(os.path.join(outdir, mutstruct), **dfsoptions)
+    mutaggrdfpath = os.path.join(outdir, mutaggr)
+    client.submit(mutaggrdf.to_csv(mutaggrdfpath, **dfsoptions))
+
+    mutstructdfpath = os.path.join(outdir, mutstruct)
+    client.submit(mutstructdf.to_csv(mutstructdfpath, **dfsoptions)
 
 
 if __name__ == "__main__":

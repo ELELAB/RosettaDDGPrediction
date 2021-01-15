@@ -151,7 +151,7 @@ MUTDIRNAME = "_dirname_"
 MUTSEP = ","
 
 # separator for the components of a mutation
-# (e.g. C.L.53 for mutating L53 on chain C)
+# (e.g. C.L.53.E for mutating L53 on chain C to E)
 COMPSEP = "."
 
 # separator for chain ID and the rest of the mutation (wild-type
@@ -169,12 +169,13 @@ DIRMUTSEP = "_"
 
 
 # column names in Rosetta .db3 files and aggregated dataframes
-ROSETTADFCOLS = {"scfname" : "score_function_name", \
-                 "bsteps" : "backrub_steps", \
+ROSETTADFCOLS = {"bsteps" : "backrub_steps", \
+                 "dirname" : "dirname", \
                  "energyunit" : "energy_unit", \
-                 "mutation" : "mutation", \
+                 "mutname" : "mutname", \
                  "name" : "name", \
                  "nstruct" : "nstruct", \
+                 "scfname" : "score_function_name", \
                  "sctype" : "score_type_name", \
                  "scvalue" : "score_value", \
                  "state" : "state", \
@@ -188,5 +189,5 @@ ROSETTADFCOLS = {"scfname" : "score_function_name", \
 
 
 # valid plot types
-PLOTTYPES = ["total_heatmap", "total_heatmap_saturation", \
-             "contributions_barplot", "dg_swarmplot"]
+PLOTTYPES = ["contributions_barplot", "dg_swarmplot", \
+             "total_heatmap", "total_heatmap_saturation"]

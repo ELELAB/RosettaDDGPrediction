@@ -705,10 +705,10 @@ def generate_mutation_dirpath(mutdict):
 
 def get_mutations(listfile, \
                   reslistfile, \
+                  pdbfile, \
                   resnumbering, \
                   extra, \
-                  nstruct, \
-                  pdbfile):
+                  nstruct):
     """Get the list of mutations to be performed."""
 
     # check the pose numbering argument
@@ -804,20 +804,21 @@ def get_mutations(listfile, \
     return mutations
 
 
-def write_dirnames2mutations(mutations, outdir, d2mfile):
-    """Write a comma-separated file mapping the name of
-    each directory containing data for a mutation to the
-    mutation itself, represented as in the mutations'
-    list file.
+def write_mutinfofile(mutations, outdir, mutinfofile):
+    """Write a comma-separated file containing the names of the
+    directories containing the results for all mutations, the
+    names of the mutations as written in the mutations list file
+    and the labels to be used for the mutations when aggregating
+    data and plotting.
     """
 
     # set the path to the output file
-    d2mfilepath = os.path.join(outdir, d2mfile)
+    mutinfofilepath = os.path.join(outdir, mutinfofile)
 
     # make sure that the directory exists. If not, create it.
     os.makedirs(outdir, exist_ok = True)
 
-    with open(d2mfilepath, "w") as out:
+    with open(mutinfofilepath, "w") as out:
         # store the mutations' directory names written
         # so that you do not write them more than once
         # (they will be repeated in a list of mutations
@@ -829,29 +830,36 @@ def write_dirnames2mutations(mutations, outdir, d2mfile):
         for mut in mutations:
             # get the directory name
             dirname = mut[MUTDIRNAME]
+            # get the attributes of the mutation
+            chain, wtr, numr, mutr = \
+                operator.itemgetter(*keys)(mut[MUT][0])
             # if the directory has not been created yet
-            if not dirname in dirnames:              
-                # get the attributes of the mutation
-                chain, wtr, numr, mutr = \
-                    operator.itemgetter(*keys)(mut[MUT][0])
-                # write out the directory name and the mutation
-                out.write(f"{dirname},{chain}{COMPSEP}"\
-                          f"{wtr}{COMPSEP}{numr}{COMPSEP}{mutr}\n")
+            if not dirname in dirnames:
+                # compose the mutation name            
+                mutname = f"{chain}{COMPSEP}{wtr}{COMPSEP}" \
+                          f"{numr}{COMPSEP}{mutr}"
+                # compose the label name
+                labelname = f"{wtr}{COMPSEP}{numr}{COMPSEP}{mutr}"
+                # write out the directory name, the mutation
+                # and the label that will be used for the
+                # mutation in the aggregation/plot
+                out.write(f"{mutname},{dirname},{labelname}\n")
                 # add the directory name to the set
                 dirnames.add(dirname)
 
 
-def get_dirnames2mutations(d2mfile):
-    """Create a dataframe from a comma-separated file
-    mapping the name of each directory containing data
-    for a mutation to the mutation itself, represented
-    as in the mutations' list file.
+def get_mutinfo(mutinfofile):
+    """Create a dataframe from a comma-separated file containing 
+    the names of the directories containing the results for all 
+    mutations, the names of the mutations as written in the 
+    mutations list file and the labels to be used for the 
+    mutations when aggregating data and plotting.
     """
 
-    with open(d2mfile, "r") as f:
+    with open(mutinfofile, "r") as f:
         # create an empty list to store directory 
         # names and mutations
-        dirnames2mutations = []
+        mutinfo = []
         
         for l in f:
             # ignore empty lines
@@ -859,21 +867,22 @@ def get_dirnames2mutations(d2mfile):
                 continue
 
             # get directory name and mutation
-            dirname, mut = l.rstrip("\n").split(",")
+            mutname, dirname, labelname = l.rstrip("\n").split(",")
             # get the different attributes of the mutation
             chain, wtr, numr, mutr = tuple(mut.split(COMPSEP))
 
             # append a dictionary mapping each attribute
             # name to the attribute itself to the list
-            dirnames2mutations.append(\
-                {ROSETTADFCOLS["mutation"] : dirname, \
+            mutinfo.append(\
+                {ROSETTADFCOLS["mutname"] : mutname, \
+                 ROSETTADFCOLS["dirname"] : dirname, \
                  CHAIN : chain, \
                  WTR : wtr, \
                  NUMR: numr, \
                  MUTR : mutr})
 
         # create a dataframe from the list
-        df = pd.DataFrame(dirnames2mutations)
+        df = pd.DataFrame(mutinfo)
         # sort mutations first by chain ID, then by residue number
         # and finally alphabetically by wild-type residue
         df = df.sort_values(by = [CHAIN, NUMR, WTR])
