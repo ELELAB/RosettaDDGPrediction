@@ -45,6 +45,7 @@ from . import cleaning
 from .defaults import (
     CONFIGRUNDIR,
     CONFIGSETTINGSDIR,
+    MUTDIRNAME,
     MUTDIRPATH,
     ROSETTAPROTOCOLS
 )
@@ -163,41 +164,28 @@ def main():
     nproc = args.nproc
     saturation = args.saturation
 
+
+
+    ############################## LOGGING ############################
+
+
+
+    # basic logging configuration
+    log.basicConfig(level = log.INFO)
+
+
+
+    ############################# SATURATION ##########################
+
+
+
     # ensure that if the saturation mutagenesis was
     # requested, a reslistfile has been passed
     if saturation and reslistfile is None:
         errstr = "You requested a saturation mutagenesis " \
                  "scan but did not provide a reslistfile."
+        log.error(errstr)
         sys.exit(errstr)
-
-    # get the name of the configuration file for running
-    # the protocol
-    configrunname = \
-        os.path.basename(configfilerun).rstrip(".yaml")
-    # get the name of the configuration file for the
-    # running options
-    configsettingsname = \
-        os.path.basename(configfilesettings).rstrip(".yaml")
-
-    # if the configuration file is a name without extension
-    if configfilerun == configrunname:
-        # assume it is a configuration file in the directory
-        # storing configuration files for running protocols
-        configfilerun = os.path.join(CONFIGRUNDIR, \
-                                     configrunname + ".yaml")
-    # otherwise assume it is a file name/file path
-    else:
-        configfilerun = util.get_abspath(configfilerun)
-
-    # if the configuration file is a name without extension
-    if configfilesettings == configsettingsname:
-        # assume it is a configuration file in the directory
-        # storing configuration files for run settings
-        configfilesettings = os.path.join(CONFIGSETTINGSDIR, \
-                                          configsettingsname + ".yaml")
-    # otherwise assume it is a file name/file path
-    else:
-        configfilesettings = util.get_abspath(configfilesettings)
 
 
 
@@ -207,7 +195,7 @@ def main():
 
     # try to get the run settings from the default YAML file
     try:
-        settings = yaml.safe_load(open(configfilesettings, "r"))
+        settings = util.get_config_settings(configfilesettings)
     # if something went wrong, report it and exit
     except Exception as e:
         errstr = f"Could not parse the configuration file " \
@@ -238,7 +226,6 @@ def main():
                  f"file {configfilerun}: {e}"
         log.error(errstr)
         sys.exit(errstr)
-
     
     # get the protocol steps
     steps = options["steps"]
@@ -253,7 +240,7 @@ def main():
                             settings["rosetta"]["execpath"])
 
     # get the suffix the Rosetta executables of interest should
-    # have (it differs according to whether they support MPI, to
+    # have (it differs according to whether they support MPI,
     # the compiler used, etc.)
     execsuffix = settings["rosetta"]["execsuffix"]
     
@@ -280,8 +267,17 @@ def main():
     # if the file with the list of mutations was passed
     if listfile:
         
-        # get the mutations options
-        mutoptions = options["mutations"]
+        # try to retrieve the options to be used for
+        # handling mutations
+        try:
+            mutoptions = options["mutations"]
+
+        # if something went wrong, report it and exit
+        except KeyError:
+            errstr = f"No options to handle mutations found in " \
+                     f"the configuration file {configfilerun}."
+            log.error(errstr)
+            sys.exit(errstr)
         
         # try to generate the list of mutations
         try:
@@ -293,7 +289,7 @@ def main():
                         pdbfile = currpdbfile, \
                         resnumbering = mutoptions["resnumbering"], \
                         extra = mutoptions["extra"], \
-                        nstruct = mutoptions["nstruct"])
+                        nstruct = mutoptions["nstruct"]).result()
         
         # if something went wrong, report it and exit
         except Exception as e:
@@ -301,7 +297,7 @@ def main():
             log.error(errstr)
             sys.exit(errstr)
     
-    # otherwise
+    # if no list of mutations was passed
     else:
         # no mutations will be performed
         mutations = [] 
@@ -329,15 +325,16 @@ def main():
         # get the step options
         stepopts = step["options"]
 
-        # get the step features
+        # get the step features (hard-coded, they define what
+        # the step is internally)
         stepfeatures = ROSETTAPROTOCOLS[family][stepname]
-
-        # get the step cleaning level
-        cleanlevel = step["cleanlevel"]
 
 
         # if the step is run via Rosetta commands
         if stepfeatures["runby"] == "rosetta":
+
+            # get the step cleaning level
+            cleanlevel = step["cleanlevel"]
 
             # get the role of the step
             role = stepfeatures["role"]
@@ -404,18 +401,19 @@ def main():
                 # if something went wrong, report it and exit
                 except Exception as e:
                     errstr = f"'{stepname}' run in {stepwd} exited " \
-                             f"with code {process["returncode"]}. " \
+                             f"with code {process['returncode']}. " \
                              f"The following exception occurred: {e}"
                     log.errstr(errstr)
                     sys.exit(errstr)
 
                 # submit also the post-run cleaning
-                futures.append(cleaning.clean_folders, \
-                               process = process, \
-                               step = stepname, \
-                               wd = stepwd, \
-                               options = stepopts, \
-                               level = cleanlevel)
+                futures.append(\
+                    client.submit(cleaning.clean_folders, \
+                                  process = process, \
+                                  stepname = stepname, \
+                                  wd = stepwd, \
+                                  options = stepopts, \
+                                  level = cleanlevel))
 
           
             # if it is a ΔΔG prediction step
@@ -430,11 +428,14 @@ def main():
                                   mutinfofile = mutoptions["mutinfofile"]))
 
                 # log the order in which the mutations will be performed
+                mutlist = [mut[MUTDIRNAME] for mut in mutations]
                 logstr = f"The following mutations will be " \
-                         f"performed:\n{'\n'.join(mutations)}."
+                         f"performed:\n{', '.join(mutlist)}."
+                log.info(logstr)
 
                 # for each mutation
                 for mut in mutations:
+
                     
                     # set the path to the mutation directory
                     mutwd = os.path.join(stepwd, mut[MUTDIRPATH])              
@@ -527,19 +528,20 @@ def main():
                     # if something went wrong, report it and exit
                     except Exception as e:
                         errstr = f"'{stepname}' run in {stepwd} exited " \
-                                 f"with code {process["returncode"]}. " \
+                                 f"with code {process['returncode']}. " \
                                  f"The following exception occurred: {e}"
                         # log the error and exit
                         log.errstr(errstr)
                         sys.exit(errstr)
 
                     # submit also the post-run cleaning
-                    futures.append(cleaning.clean_folders, \
-                                   process = process, \
-                                   step = stepname, \
-                                   wd = mutwd, \
-                                   options = optsmut, \
-                                   level = cleanlevel)
+                    futures.append(\
+                        client.submit(cleaning.clean_folders, \
+                                      process = process, \
+                                      stepname = stepname, \
+                                      wd = mutwd, \
+                                      options = optsmut, \
+                                      level = cleanlevel))
 
       
         # if the step is run by Python

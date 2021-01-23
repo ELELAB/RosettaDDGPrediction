@@ -59,10 +59,10 @@ energy_contributions:
 #--------------------- OUTPUT DATAFRAMES OPTIONS ---------------------#
 
 
-outdfs:
+out_dfs:
   
   # whether to rescale the energy scores to kcal/mol
-  rescale: True
+  convert_to_kcalmol: True
   
   # format options for the output dataframes
   options:
@@ -74,19 +74,19 @@ outdfs:
     sep: ","
 
   # name of the output files storing the dataframes
-  outnames:
+  out_names:
     # name of the output file storing the dataframe containing
     # the aggregate results for all mutations performed in
     # the run
-    outaggregate: "ddg_mutations_aggregate.csv"
+    out_aggregate: "ddg_mutations_aggregate.csv"
     # name of the output file storing the dataframe containing
     # the results for all mutations performed in the run,
     # split by the single structures produced during the run
-    outstructures: "ddg_mutations_structures.csv"
+    out_structures: "ddg_mutations_structures.csv"
     # suffix to be appended to the output files containing
     # aggregate results for each mutation performed in the run
-    outsuffixaggregate: "_aggregate.csv"
+    out_suffix_aggregate: "_aggregate.csv"
     # suffix to be appended to the output files containing
     # results for each mutation performed in the run, split
     # by the single structures produced during the run
-    outsuffixstructures: "_structures.csv"
+    out_suffix_structures: "_structures.csv"

@@ -296,13 +296,17 @@ def aggregate_data_flexddg(df, \
 def generate_output_dataframes(dgwt, \
                                dgmut, \
                                ddg, \
-                               mutname, \
+                               mutation, \
+                               mutlabel, \
+                               poslabel, \
                                rescale, \
                                listcontributions, \
                                convfact):
     
     # get the columns names
     mutationcol = ROSETTADFCOLS["mutation"]
+    mutlabelcol = ROSETTADFCOLS["mutlabel"]
+    poslabelcol = ROSETTADFCOLS["poslabel"]
     statecol = ROSETTADFCOLS["state"]
     totscorecol = ROSETTADFCOLS["totscore"]
     energyunitcol = ROSETTADFCOLS["energyunit"]
@@ -313,26 +317,30 @@ def generate_output_dataframes(dgwt, \
     scorecols = [totscorecol] + listcontributions
 
     # columns of the structures dataframe
-    structdfcols = [mutationcol, structnumcol, statecol, \
-                    energyunitcol, scfnamecol, *scorecols]
+    structdfcols = [mutationcol, mutlabelcol, poslabelcol,  \
+                    structnumcol, statecol, energyunitcol, \
+                    scfnamecol, *scorecols]
 
     # columns of the aggregate dataframe
-    aggrdfcols = [mutationcol, statecol, \
-                  energyunitcol, scfnamecol, *scorecols]
+    aggrdfcols = [mutationcol, mutlabelcol, poslabelcol, \
+                  statecol, energyunitcol, scfnamecol, \
+                  *scorecols]
 
     #------------------------ Structures data ------------------------#
 
-    # concatenate the two dataframes
+    # concatenate the three dataframes
     structdf = pd.concat([dgwt, dgmut, ddg])
-    # add the column with the mutation name as first column
-    structdf.insert(0, mutationcol, mutname)
+    # add the columns with the mutation name and the mutation labels
+    structdf.insert(0, mutationcol, mutation)
+    structdf.insert(1, mutlabelcol, mutlabel)
+    structdf.insert(2, poslabelcol, poslabel)
 
     #------------------------- Aggregate data ------------------------#
 
-    # group by mutation and state
-    groupby = [mutationcol, statecol, scfnamecol]
-    aggrdf = \
-        structdf.groupby(groupby).mean().reset_index()
+    # group
+    groupby = [mutationcol, mutlabelcol, poslabelcol, \
+               statecol, scfnamecol]
+    aggrdf = structdf.groupby(groupby).mean().reset_index()
 
     #----------------------------- Rescale ---------------------------#
 

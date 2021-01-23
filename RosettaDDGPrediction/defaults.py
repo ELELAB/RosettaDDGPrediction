@@ -137,9 +137,10 @@ NUMR = "_numr_"
 # chain ID in a single mutation
 CHAIN = "_chain_"
 
-# all attributes that are not the mutant residue
+# all attributes that defines the position of the
+# residue
 # (chain ID, wild-type residue and residue number)
-NOMUTR = "_nomutr_"
+POSR = "_nomutr_"
 
 # mutation directory path
 MUTDIRPATH = "_dirpath_"
@@ -156,7 +157,7 @@ COMPSEP = "."
 
 # separator for chain ID and the rest of the mutation (wild-type
 # residue, residue number and mutant residue) in the directory name
-DIRCHAINSEP = "-"
+CHAINSEP = "-"
 
 # separator for single mutations in the directory name (in case of
 # multiple simultaneous mutations)
@@ -167,12 +168,18 @@ DIRMUTSEP = "_"
 ############################# AGGREGATION #############################
 
 
+# column names in the mutations' info file
+MUTINFOCOLS = {"mutname" : "mutname", \
+               "dirname" : "dirname", \
+               "mutlabel" : "mutlabel", \
+               "poslabel" : "poslabel"}
 
 # column names in Rosetta .db3 files and aggregated dataframes
 ROSETTADFCOLS = {"bsteps" : "backrub_steps", \
-                 "dirname" : "dirname", \
                  "energyunit" : "energy_unit", \
-                 "mutname" : "mutname", \
+                 "mutation" : "mutation", \
+                 "mutlabel" : "mutation_label", \
+                 "poslabel" : "position_label", \
                  "name" : "name", \
                  "nstruct" : "nstruct", \
                  "scfname" : "score_function_name", \

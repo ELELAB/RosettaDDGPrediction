@@ -32,19 +32,12 @@
 # standard library
 import argparse
 import logging as log
-import os
-import os.path
 import sys
-# third-party packages
-import matplotlib.pyplot as plt
-import pandas as pd
-import yaml
 # RosettaDDGProtocols
 from .defaults import (
      CONFIGAGGRDIR,
      CONFIGAGGRFILE,
      CONFIGPLOTDIR,
-     CONFIGRUNDIR,
      PLOTTYPES,
      ROSETTADFCOLS
 )
@@ -95,52 +88,15 @@ def main():
                         required = True, 
                         help = cp_help)
 
-    mf_help = "File with info about the mutations (it " \
-              "is created when running)." 
-    parser.add_argument("-mf", "--mutinfofile", \
-                        type = str, \
-                        help = mf_help)
-
 
     # parse the arguments
     args = parser.parse_args()
     # files
     infile = util.get_abspath(args.infile)
     outfile = util.get_abspath(args.outfile)
-    mutinfofile = util.get_abspath(args.mutinfofile)
     # configuration files
     configfileplot = args.configfile_plot
     configfileaggr = args.configfile_aggregate
-
-
-    # get the name of the configuration file for data
-    # aggregation
-    configaggrname = \
-        os.path.basename(configfileaggr).rstrip(".yaml")
-    # get the name of the configuration file for plotting
-    configplotname = \
-        os.path.basename(configfileplot).rstrip(".yaml")
-
-
-    # if the configuration file is a name without extension
-    if configfileaggr == configaggrname:
-        # assume it is a file in the directory where
-        # configuration files for data aggregation are stored
-        configfileaggr = os.path.join(CONFIGAGGRDIR, \
-                                      configaggrname + ".yaml")
-    # otherwise assume it is a file name/file path
-    else:
-        configfileaggr = util.get_abspath(configfileaggr)
-
-    # if the configuration file is a name without extension
-    if configfileplot == configplotname:
-        # assume it is a file in the directory where
-        # configuration files for plotting are stored
-        configfileplot = os.path.join(CONFIGPLOTDIR, \
-                                      configplotname + ".yaml")
-    # otherwise assume it is a file name/file path
-    else:
-        configfileplot = util.get_abspath(configfileplot)
 
 
 
@@ -159,21 +115,21 @@ def main():
     
     # try to get the configuration for data aggregation
     try:
-        configaggr = \
-            yaml.safe_load(open(configfileaggr))
+        configaggr = util.get_config_aggregate(configfileaggr)
     # if something went wrong, report it and exit
     except Exception as e:
-        log.error(f"Could not parse {configfileaggr}: {e}")
-        sys.exit(1)
+        errstr = f"Could not parse {configfileaggr}: {e}"
+        log.error(errstr)
+        sys.exit(errstr)
     
     # try to get the plot+output configuration
     try:
-        configplot = \
-            plotting.get_config_plot(configfile = configfileplot)
+        configplot = util.get_config_plot(configfileplot)
     # if something went wrong, report it and exit
     except Exception as e:
-        log.error(f"Could not parse {configfileplot}: {e}")
-        sys.exit(1)
+        errstr = f"Could not parse {configfileplot}: {e}"
+        log.error(errstr)
+        sys.exit(errstr)
 
     # get the plot type
     plottype = configplot["plot"]["type"]
@@ -185,74 +141,79 @@ def main():
 
     ######################### PLOT GENERATION #########################
 
-
-
-    # try to load the input dataframe
-    try:
-        df = pd.read_csv(infile)
-    # if something goes wrong, report it and exit
-    except Exception as e:
-        log.error(f"Could not load {infile}: {e}")
-        sys.exit(1)
  
 
-    # get the scoring function name
-    scfname = df[ROSETTADFCOLS["scfname"]].unique()[0]
+    # get the configuration to be used when outputting the plot
+    outconfig = configplot.get("output", {})
 
 
     # try to generate the plot
-    try:
+    #try:
 
         # if the plot is a heatmap of total scores
-        if plottype == "total_heatmap":
-            ax = plotting.plot_total_heatmap(df = df, \
-                                             config = config, \
-                                             mutinfofile = mutinfofile)
+    if plottype == "total_heatmap":
+            # load the aggregated data
+        df = plotting.load_aggregated_data(infile = infile)
+            # plot the heatmap
+        plotting.plot_total_heatmap(df = df, \
+                                        config = config, \
+                                        outfile = outfile, \
+                                        outconfig = outconfig)
 
         # if the plot is a heatmap for a saturation mutagenesis scan
-        elif plottype == "total_heatmap_saturation":
-            ax = plotting.plot_total_heatmap(df = df, \
-                                             config = config, \
-                                             saturation = True, \
-                                             mutinfofile = mutinfofile)
+    elif plottype == "total_heatmap_saturation":
+            # load the aggregated data
+        df = plotting.load_aggregated_data(infile = infile, \
+                                               saturation = True)
+            # plot the 2D heatmap
+        plotting.plot_total_heatmap(df = df, \
+                                        config = config, \
+                                        outfile = outfile, \
+                                        outconfig = outconfig, \
+                                        saturation = True)
 
         # if the plot is a barplot dividing the total ΔΔG score
         # into its energy contributions
-        elif plottype == "contributions_barplot":
-            contributions = configaggr["energy_contributions"][scfname]
-            ax = plotting.plot_contributions_barplot(\
+    elif plottype == "contributions_barplot":
+            # load the aggregated data
+        df = plotting.load_aggregated_data(infile = infile)
+            # get the scoring function name
+        scfname = df[ROSETTADFCOLS["scfname"]].unique()[0]
+            # get the list of energy cntributions for the scoring
+            # function used
+        contributions = configaggr["energy_contributions"][scfname]
+            # plot the bar plot
+        outconfig.pop("format")
+        plotting.plot_contributions_barplot(\
                                     df = df, \
                                     config = config, \
                                     contributions = contributions, \
-                                    mutinfofile = mutinfofile)
+                                    outfile = outfile, \
+                                    outconfig = outconfig)
 
         # if the plot is a swarmplot showing the distributions of
         # total ΔG scores for all wild-type and mutant structures
-        elif plottype == "dg_swarmplot":
-            ax = plotting.plot_dg_swarmplot(df = df, \
-                                            config = config, \
-                                            mutinfofile = mutinfofile)
+    elif plottype == "dg_swarmplot":
+            # load the aggregated data
+        df = plotting.load_aggregated_data(infile = infile)
+            # plot the swarmplot 
+        plotting.plot_dg_swarmplot(df = df, \
+                                       config = config, \
+                                       outfile = outfile, \
+                                       outconfig = outconfig)
 
-        # if another plot type was passed, report it and exit
-        else:
-            log.error(f"Unrecognized plot type {plottype}.")
-            sys.exit(1)
+        # if an invalid plot type was passed, report it and exit
+    else:
+        errstr = f"Unrecognized plot type {plottype}."
+        log.error(errstr)
+        sys.exit(errstr)
 
 
     # if something went wrong, report it and exit
-    except Exception as e:
-        log.error(f"Could not generate the {plottype} plot: {e}")
-        sys.exit(1)
-
-
-    # for top and right spine of the plot
-    for spine in ["top", "right"]:
-        # hide it
-        ax.spines[spine].set_visible(False)
-
-
-    # save the plot to the output file
-    plt.savefig(outfile, **configplot.get("output", {}))
+    #except Exception as e:
+    #    errstr = f"Could not generate the {plottype} plot: {e}"
+    #    log.error(errstr)
+    #    sys.exit(errstr)
 
 
 if __name__ == "__main__":

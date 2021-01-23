@@ -37,23 +37,28 @@ import re
 import subprocess
 # third-party packages
 import Bio.PDB as PDB
+import matplotlib.font_manager as fm
 import pandas as pd
 import yaml
 # RosettaDDGProtocols
 from .dask_patches import reset_worker_logger
 from .defaults import (
     CHAIN,
+    CHAINSEP,
     COMPSEP,
-    DIRCHAINSEP,
+    CONFIGAGGRDIR,
+    CONFIGPLOTDIR,
+    CONFIGRUNDIR,
+    CONFIGSETTINGSDIR,
     DIRMUTSEP,
     MUT,
     MUTDIRNAME,
     MUTDIRPATH,
+    MUTINFOCOLS,
     MUTR,
-    MUTSEP,
-    NOMUTR, 
+    MUTSEP, 
     NUMR,
-    ROSETTADFCOLS,
+    POSR,
     ROSETTAOPTIONS,
     ROSETTAPROTOCOLS,
     ROSETTASCRIPTSDIR,
@@ -263,7 +268,7 @@ def write_resfile(mut, resfile):
 
 
 
-########################### OPTIONS-RELATED ###########################
+########################### CONFIG/OPTIONS ############################
 
 
 
@@ -358,66 +363,6 @@ def recursive_traverse(data, \
 
         # return the dictionary
         return data
-
-
-def get_config_run_version_1(config):
-    """Get the configuration from version 1 YAML 
-    configuration files.
-    """
-
-    # get the protocol family
-    family = config["family"]
-
-    # if the protocol family is not recognized, raise
-    # an error
-    if not family in ROSETTAPROTOCOLS.keys():
-        errstr = f"Unrecognized protocol family {family}."
-        raise ValueError(errstr)
-
-    # for each step
-    for stepname, step in config["steps"].items():
-        
-        # if the stepname is not recognized, raise an error
-        if not stepname in ROSETTAPROTOCOLS[family].keys():
-            errstr = f"Unrecognized step name {stepname} " \
-                     f"for protocol family {family}."
-            raise ValueError(errstr)
-
-        # get the step fixed settings
-        stepsettings = ROSETTAPROTOCOLS[family][stepname]
-        
-        # only consider Rosetta steps
-        if stepsettings["runby"] == "rosetta":
-            # create a copy of the configuration
-            stepopts = dict(step["options"])
-            # recursively remove all options that map
-            # to None and convert the other ones to strings
-            newstepopts = recursive_traverse(\
-                            data = stepopts, \
-                            actions = ["pop_empty", "substitute"], \
-                            func = convert_rosetta_option_to_string)
-            # update the dictionary of options with the new
-            # options for the step
-            config["steps"][stepname]["options"] = newstepopts
-
-    # return the configuration
-    return config
-
-
-def get_config_run(configfile):
-    """Get the configuration for running the protocol."""
-
-    # load the configuration from the file
-    config = yaml.safe_load(open(configfile, "r"))
-
-    # check the version of the configuration file
-    if config["version"] == 1:
-        # return the configuration written in version 1 format
-        return get_config_run_version_1(config = config)
-    else:
-        errstr = "Only version 1 configuration files " \
-                 "are supported for now."
-        raise ValueError(errstr)
 
 
 def get_option_key(options, option):
@@ -539,6 +484,165 @@ def get_outpdbname(options, pdbfile, struct = None):
     # if no structure number was specified
     else:
         return f"{prefix}{pdbname}{suffix}.pdb"
+
+
+def get_config_run_version_1(config):
+    """Get the configuration from version 1 YAML 
+    configuration files.
+    """
+
+    # get the protocol family
+    family = config["family"]
+
+    # if the protocol family is not recognized, raise
+    # an error
+    if not family in ROSETTAPROTOCOLS.keys():
+        errstr = f"Unrecognized protocol family {family}."
+        raise ValueError(errstr)
+
+    # for each step
+    for stepname, step in config["steps"].items():
+        
+        # if the stepname is not recognized, raise an error
+        if not stepname in ROSETTAPROTOCOLS[family].keys():
+            errstr = f"Unrecognized step name {stepname} " \
+                     f"for protocol family {family}."
+            raise ValueError(errstr)
+
+        # get the step fixed settings
+        stepsettings = ROSETTAPROTOCOLS[family][stepname]
+        
+        # only consider Rosetta steps
+        if stepsettings["runby"] == "rosetta":
+            # create a copy of the configuration
+            stepopts = dict(step["options"])
+            # recursively remove all options that map
+            # to None and convert the other ones to strings
+            newstepopts = recursive_traverse(\
+                            data = stepopts, \
+                            actions = ["pop_empty", "substitute"], \
+                            func = convert_rosetta_option_to_string)
+            # update the dictionary of options with the new
+            # options for the step
+            config["steps"][stepname]["options"] = newstepopts
+
+    # return the configuration
+    return config
+
+
+def get_config_run(configfile):
+    """Get the configuration for running the protocol."""
+
+    # get the name of the configuration file for running
+    # the protocol
+    configfilename = os.path.basename(configfile).rstrip(".yaml")
+
+    # if the configuration file is a name without extension
+    if configfile == configfilename:
+        # assume it is a configuration file in the directory
+        # storing configuration files for running protocols
+        configfile = os.path.join(CONFIGRUNDIR, \
+                                  configfilerun + ".yaml")
+    # otherwise assume it is a file name/file path
+    else:
+        configfile = get_abspath(configfile)
+
+    # load the configuration from the file
+    config = yaml.safe_load(open(configfile, "r"))
+
+    # check the version of the configuration file
+    if config["version"] == 1:
+        # return the configuration written in version 1 format
+        return get_config_run_version_1(config = config)
+    else:
+        errstr = "Only version 1 configuration files " \
+                 "are supported for now."
+        raise ValueError(errstr)
+
+
+def get_config_settings(configfile):
+    """Get the settings."""
+
+    # get the name of the configuration file for the
+    # running options
+    configfilename = os.path.basename(configfile).rstrip(".yaml")
+
+    # if the configuration file is a name without extension
+    if configfile == configfilename:
+        # assume it is a configuration file in the directory
+        # storing configuration files for run settings
+        configfile = os.path.join(CONFIGSETTINGSDIR, \
+                                  configfilename + ".yaml")
+    # otherwise assume it is a file name/file path
+    else:
+        configfile = get_abspath(configfile)
+
+    return yaml.safe_load(open(configfile, "r"))
+
+
+def get_config_aggregate(configfile):
+    """Get the configuration for data aggregation."""
+    
+    # get the name of the configuration file for data
+    # aggregation
+    configfilename = os.path.basename(configfile).rstrip(".yaml")
+
+    # if the configuration file is a name without extension
+    if configfile == configfilename:
+        # assume it is a file in the directory where
+        # configuration files for data aggregation are stored
+        configfile = os.path.join(CONFIGAGGRDIR, \
+                                  configfilename + ".yaml")
+    # otherwise assume it is a file name/file path
+    else:
+        configfile = get_abspath(configfile)
+
+    return yaml.safe_load(open(configfile, "r"))
+
+
+def get_config_plot_version_1(config):
+    """Parse the configuration file for plotting,
+    version 1.
+    """
+    
+    # create a copy of the configuration
+    newconfig = dict(config)
+    # substitute the font properties definitions
+    # with the corresponding FontProperties instances
+    recursive_traverse(data = newconfig, \
+                       actions = ["substitute_dict"], \
+                       func = fm.FontProperties, \
+                       keys = {"fontproperties"})
+    # return the configuration
+    return newconfig
+
+
+def get_config_plot(configfile):
+    """Get the plotting configuration."""
+
+    # get the name of the configuration file for plotting
+    configfilename = os.path.basename(configfile).rstrip(".yaml")
+
+    # if the configuration file is a name without extension
+    if configfile == configfilename:
+        # assume it is a file in the directory where
+        # configuration files for plotting are stored
+        configfile = os.path.join(CONFIGPLOTDIR, \
+                                  configfilename + ".yaml")
+    # otherwise assume it is a file name/file path
+    else:
+        configfile = get_abspath(configfile)
+    
+    # load the configuration from the file
+    config = yaml.safe_load(open(configfile, "r"))
+
+    # check the version of the configuration file
+    if config["version"] == 1:
+        # return the configuration written in version 1 format
+        return get_config_plot_version_1(config = config)
+    else:
+        raise ValueError("Only version 1 configuration files " \
+                         "are supported for now.")
 
 
 
@@ -684,7 +788,7 @@ def generate_mutation_dirpath(mutdict):
         mutr = mutr.strip("X[]")
         if chain != "_":
             # chain with chain IDs
-            fmtmuts.append(f"{chain}{DIRCHAINSEP}{wtr}{numr}{mutr}")
+            fmtmuts.append(f"{chain}{CHAINSEP}{wtr}{numr}{mutr}")
         else:
             # one chain with no chain ID
             fmtmuts.append(f"{wtr}{numr}{mutr}")
@@ -836,14 +940,19 @@ def write_mutinfofile(mutations, outdir, mutinfofile):
             # if the directory has not been created yet
             if not dirname in dirnames:
                 # compose the mutation name            
-                mutname = f"{chain}{COMPSEP}{wtr}{COMPSEP}" \
-                          f"{numr}{COMPSEP}{mutr}"
-                # compose the label name
-                labelname = f"{wtr}{COMPSEP}{numr}{COMPSEP}{mutr}"
+                mutation = f"{chain}{COMPSEP}{wtr}{COMPSEP}" \
+                           f"{numr}{COMPSEP}{mutr}"
+                # compose the mutation label (by default
+                # without the chain ID)
+                mutlabel = f"{wtr}{numr}{mutr}"
+                # compose the position label (by default
+                # without the chain ID)
+                poslabel = f"{wtr}{numr}"
                 # write out the directory name, the mutation
                 # and the label that will be used for the
                 # mutation in the aggregation/plot
-                out.write(f"{mutname},{dirname},{labelname}\n")
+                out.write(f"{mutation},{dirname},"\
+                          f"{mutlabel},{poslabel}\n")
                 # add the directory name to the set
                 dirnames.add(dirname)
 
@@ -866,16 +975,18 @@ def get_mutinfo(mutinfofile):
             if re.match(r"^\s*$", l):
                 continue
 
-            # get directory name and mutation
-            mutname, dirname, labelname = l.rstrip("\n").split(",")
+            # get mutation, directory name and mutation name
+            mutname, dirname, mutlabel, poslabel = \
+                l.rstrip("\n").split(",")
             # get the different attributes of the mutation
-            chain, wtr, numr, mutr = tuple(mut.split(COMPSEP))
-
+            chain, wtr, numr, mutr = tuple(mutname.split(COMPSEP))
             # append a dictionary mapping each attribute
             # name to the attribute itself to the list
             mutinfo.append(\
-                {ROSETTADFCOLS["mutname"] : mutname, \
-                 ROSETTADFCOLS["dirname"] : dirname, \
+                {MUTINFOCOLS["mutname"] : mutname, \
+                 MUTINFOCOLS["dirname"] : dirname, \
+                 MUTINFOCOLS["mutlabel"] : mutlabel, \
+                 MUTINFOCOLS["poslabel"] : poslabel, \
                  CHAIN : chain, \
                  WTR : wtr, \
                  NUMR: numr, \
@@ -886,10 +997,6 @@ def get_mutinfo(mutinfofile):
         # sort mutations first by chain ID, then by residue number
         # and finally alphabetically by wild-type residue
         df = df.sort_values(by = [CHAIN, NUMR, WTR])
-        # create a column storing the position name (chain ID,
-        # residue number and wild-type residue but no mutant
-        # residue)
-        df[NOMUTR] = df[CHAIN] + DIRCHAINSEP + df[WTR] + df[NUMR]
         # drop the columns containing chain IDs, residue numbers
         # and wild-type residues (were kept only for sorting
         # purposes)

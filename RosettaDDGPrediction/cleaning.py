@@ -52,9 +52,9 @@ def clean_folders(process, stepname, wd, options, level):
     elif stepname == "flexddg":
         cleanfunc = clean_flexddg
     # call the appropriate cleaning function
-    clean_func(wd = wd, \
-               options = options, \
-               level = level)
+    cleanfunc(wd = wd, \
+              options = options, \
+              level = level)
 
 
 def clean_relax(wd, options, level):
@@ -67,7 +67,7 @@ def clean_relax(wd, options, level):
         raise NotImplementedError(errstr)    
 
 
-def clean_cartddg(wd, options, level):
+def clean_cartesian(wd, options, level):
     """Clean the folders where the 'cartesian' step was run."""
 
     # simply return if no cleaning was requested

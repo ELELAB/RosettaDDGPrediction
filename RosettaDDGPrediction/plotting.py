@@ -33,65 +33,55 @@ import collections
 import operator
 import re
 # third-party packages
-import matplotlib.font_manager as fm
+from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import yaml
 # RosettaDDGProtocols
 from .defaults import (
+    CHAIN,
+    CHAINSEP,
+    COMPSEP,
+    MUTR,
+    NUMR,
     ROSETTADFCOLS, 
-    WTR, 
-    NUMR, 
-    MUTR, 
-    CHAIN, 
-    NOMUTR
+    WTR
 )
-from .util import (
-     recursive_traverse, 
-     get_items, 
-     get_dirnames2mutations
+from .util import ( 
+     get_items,
+     recursive_traverse
 )
 
 
 
-############################ CONFIGURATION ############################
+############################# DATA LOADING ############################
 
 
 
-def get_config_plot_version_1(config):
-    """Parse the configuration file for plotting,
-    version 1.
-    """
-    
-    # create a copy of the configuration
-    newconfig = dict(config)
-    # substitute the font properties definitions
-    # with the corresponding FontProperties instances
-    recursive_traverse(data = newconfig, \
-                       actions = ["substitute_dict"], \
-                       func = fm.FontProperties, \
-                       keys = {"fontproperties"})
-    # return the configuration
-    return newconfig
+def load_aggregated_data(infile, saturation = False):
+    """Load aggregated data from a CSV file."""
 
+    # columns containing data of interest in the aggregated
+    # dataframe
+    mutationcol = ROSETTADFCOLS["mutation"]
 
-def get_config_plot(configfile):
-    """Get the plotting configuration."""
-    
-    # load the configuration from the file
-    config = yaml.safe_load(open(configfile, "r"))
+    # load the dataframe
+    df = pd.read_csv(infile)
 
-    # check the version of the configuration file
-    if config["version"] == 1:
-        # return the configuration written in version 1 format
-        return get_config_plot_version_1(config = config)
-    else:
-        raise ValueError("Only version 1 configuration files " \
-                         "are supported for now.")
+    # if the aggregated data are from a saturation mutagenesis
+    # scan
+    if saturation:
+        # create new columns 
+        newcols = pd.DataFrame(\
+                    df[mutationcol].str.split(COMPSEP, 3).tolist(), \
+                    columns = [CHAIN, WTR, NUMR, MUTR])
+        # add the new columns
+        df = pd.concat([df, newcols], axis = 1)
 
+    # return the dataframe
+    return df
 
 
 ############################# AESTHETICS ##############################
@@ -398,7 +388,8 @@ def set_axis(ax, \
 
 def plot_total_heatmap(df, \
                        config, \
-                       mutinfofile, \
+                       outfile, \
+                       outconfig, \
                        saturation = False):
     """Plot either:
 
@@ -417,29 +408,24 @@ def plot_total_heatmap(df, \
     #----------------------- Data preprocessing ----------------------#
 
 
-    # get the names of the columns of the dataframe
+    # get the names of the columns of the aggregate dataframe
     # containing data of interest
     mutationcol = ROSETTADFCOLS["mutation"]
+    poslabelcol = ROSETTADFCOLS["poslabel"]
+    mutlabelcol = ROSETTADFCOLS["mutlabel"]
     statecol = ROSETTADFCOLS["state"] 
     totscorecol = ROSETTADFCOLS["totscore"]
-
-    # take only the total ΔΔG values
-    finaldf = df[df[statecol] == "ddg"][[mutationcol, totscorecol]]
-
-    # get info about the mutations
-    mutinfo = get_mutinfo(mutinfofile = mutinfofile)
     
     # if the data are from a saturation mutagenesis scan
     if saturation:
-        # merge the two dataframes on the mutation names
-        finaldf = pd.merge(mutinfo, finaldf, on = mutationcol)
-        # drop the mutation column
-        finaldf = finaldf.drop(mutationcol, axis = 1)
+        # take only the total ΔΔG values
+        finaldf = df[df[statecol] == "ddg"][[poslabelcol, \
+                                             MUTR, totscorecol]]
         # create a dataframe where rows are positions (identified
         # by all mutation elements that are not the mutated residue,
         # such as chain, residue number and wild-type residue) and
         # columns are mutated residues
-        finaldf = finaldf.pivot(index = NOMUTR, \
+        finaldf = finaldf.pivot(index = poslabelcol, \
                                 columns = MUTR, \
                                 values = totscorecol).transpose()
         # y-axis tick labels will be the row names
@@ -450,10 +436,12 @@ def plot_total_heatmap(df, \
 
     # if the data are not from a saturation mutagenesis scan
     else:
-        # set the mutations as index, drop the column containin
+        # keep only the label column and total score
+        finaldf = df[df[statecol] == "ddg"][[mutlabelcol, totscorecol]]
+        # set the mutations as index, drop the column containing
         # them and transpose the dataframe so that the mutations
         # are on the x-axis
-        finaldf = finaldf.set_index(mutationcol).transpose()
+        finaldf = finaldf.set_index(mutlabelcol).transpose()
         # the y-axis should have neither ticks nor tick labels,
         # since the heatmap will have only one row
         yticks, yticklabels = [], []
@@ -539,12 +527,17 @@ def plot_total_heatmap(df, \
              ticklabels = yticklabels, \
              config = yconfig)
 
-    # return the plot axis
-    return ax
+    # for top and right spine of the plot
+    for spine in ["top", "right"]:
+        # hide it
+        ax.spines[spine].set_visible(False)
+
+    # save the plot to the output file
+    plt.savefig(outfile, **outconfig)
 
 
 
-def plot_dg_swarmplot(df, config, mutinfofile):
+def plot_dg_swarmplot(df, config, outfile, outconfig):
     """Plot a swarmplot showing, for each mutation, the ΔG score of
     each wild-type and mutant structure present in the ensemble of
     structures generated by the protocol.
@@ -559,21 +552,21 @@ def plot_dg_swarmplot(df, config, mutinfofile):
     
     # get the names of the columns of the dataframe
     # containing data of interest
+    mutlabelcol = ROSETTADFCOLS["mutlabel"]
+    statecol = ROSETTADFCOLS["state"]
     structnumcol = ROSETTADFCOLS["structnum"]
     totscorecol = ROSETTADFCOLS["totscore"]
-    mutationcol = ROSETTADFCOLS["mutation"]
-    statecol = ROSETTADFCOLS["state"] 
 
     # take both wild type and mutant ΔG values, but
     # not ΔΔG values
     df = df.loc[df[statecol].isin(["wt", "mut"])]
     # create a new dataframe containing only the 
     # columns of interest
-    df = df[[mutationcol, totscorecol, \
+    df = df[[mutlabelcol, totscorecol, \
              statecol, structnumcol]]
 
     # get the x-axis tick labels
-    xticklabels = df[mutationcol].unique()
+    xticklabels = df[mutlabelcol].unique()
     # get the x-axis tick positions
     xticks = range(len(xticklabels))
     
@@ -581,7 +574,7 @@ def plot_dg_swarmplot(df, config, mutinfofile):
     yvalues = df[totscorecol].values.flatten()
     # set x, y and hue columns that will be used
     # to generate the swarmplot
-    x, y, hue = mutationcol, totscorecol, statecol
+    x, y, hue = mutlabelcol, totscorecol, statecol
 
 
     #------------------------- Configuration -------------------------#
@@ -633,11 +626,21 @@ def plot_dg_swarmplot(df, config, mutinfofile):
              config = yconfig, \
              ticks = yticks)
 
-    # return the plot axis
-    return ax
+    # for top and right spine of the plot
+    for spine in ["top", "right"]:
+        # hide it
+        ax.spines[spine].set_visible(False)
+
+    # save the plot to the output file
+    plt.savefig(outfile, **outconfig)
 
 
-def plot_contributions_barplot(df, contributions, config, mutinfofile):
+
+def plot_contributions_barplot(df, \
+                               config, \
+                               contributions, \
+                               outfile, \
+                               outconfig):
     """Plot a bar plot with stacked bars representing the different
     energy contributions making up the total ΔΔG scores. 
     Positive contributions are stacked upon the y positive
@@ -654,7 +657,8 @@ def plot_contributions_barplot(df, contributions, config, mutinfofile):
     
     # get the names of the columns of the dataframe
     # containing data of interest
-    mutationcol = ROSETTADFCOLS["mutation"]
+    mutlabelcol = ROSETTADFCOLS["mutlabel"]
+    poslabelcol = ROSETTADFCOLS["poslabel"]
     statecol = ROSETTADFCOLS["state"]
     totscorecol = ROSETTADFCOLS["totscore"]
 
@@ -678,13 +682,6 @@ def plot_contributions_barplot(df, contributions, config, mutinfofile):
     # positive
     yvalues = sumpos + sumneg
 
-    # the labels of the ticks on the x-axis will be the names
-    # of the mutations
-    xticklabels = df[mutationcol].unique()
-
-    # get the positions of the ticks on the x-axis
-    xticks = range(len(xticklabels))
-
 
     #------------------------- Configuration -------------------------#
 
@@ -692,8 +689,9 @@ def plot_contributions_barplot(df, contributions, config, mutinfofile):
     # get the configuration for the bar plot, the legend, the line
     # marking y coordinate 0.0 and the x- and the y-axis
     bconfig, lconfig, axhconfig, xconfig, yconfig = \
-        get_items(config, ("barplot", "legend", "axhline", \
-                  "xaxis", "yaxis"), {})
+        get_items(config, \
+                  ("barplot", "legend", "axhline", "xaxis", "yaxis"), \
+                  {})
 
     # get the configuration for the bars and for the annotations
     # displayed over the bars
@@ -707,46 +705,91 @@ def plot_contributions_barplot(df, contributions, config, mutinfofile):
 
     #----------------------------- Plot ------------------------------#
 
+    
+    # open the multi-page PDF
+    with PdfPages(outfile) as pdf:
 
-    # draw a stacked bar plot in which positive contributions are
-    # stacked on the positive semiaxis and negative contributions are
-    # stacked on the negative semiaxis
-    ax = dfcontr.plot(kind = "bar", **bconfigbars)
+        # get the unique positions
+        positions = df[poslabelcol].unique().tolist()
+        # set the number of pages of the PDF equal to the
+        # number of positions scanned
+        numpages = len(positions)
 
-    # get the positions of the ticks on the y-axis
-    yticks = generate_ticks_positions(values = yvalues, \
-                                      config = yconfigint)
+        # for each page
+        for page in range(numpages):
 
-    # generate text annotations with the total ΔΔG scores that will
-    # appear on the top of the bars
-    generate_barplot_annotations(ax = ax, \
-                                 config = bconfigannot, \
-                                 sumpos = sumpos, \
-                                 total = dftotal, \
-                                 yticks = yticks)
+            # create a new figure
+            plt.figure()
 
-    # generate an horizontal line that passes through
-    # y coordinate 0.0
-    generate_axhline(ax = ax, \
-                     config = axhconfig, \
-                     df = dftotal)
+            # get a sub-dataframe of the original one containing
+            # data only for the current position of interest
+            subdf = df.loc[df[poslabelcol] == positions[page]]
 
-    # add the legend
-    generate_legend(ax = ax, \
-                    config = lconfig)
+            # the labels of the ticks on the x-axis will be the names
+            # of the mutations
+            xticklabels = subdf[mutlabelcol].unique()
 
-    # set the x-axis
-    set_axis(ax = ax, \
-             axis = "x", \
-             config = xconfig, \
-             ticks = xticks, \
-             ticklabels = xticklabels)
+            # get the positions of the ticks on the x-axis
+            xticks = range(len(xticklabels))
 
-    # set the y-axis
-    set_axis(ax = ax, \
-             axis = "y", \
-             config = yconfig, \
-             ticks = yticks)
+            # get the energy contributions for the current position
+            subdfcontr = subdf[subdf[statecol] == "ddg"][contributions]
+            # get the total scores for the current position
+            subdftotal = subdf[subdf[statecol] == "ddg"][totscorecol]
+            # get the sum of total positive contributions for the
+            # mutations of the current position
+            subsumpos = []
+            for casename, data in subdfcontr.iterrows():
+                subsumpos.append(data[data>0].sum())
 
-    # return the plot axis
-    return ax
+            # draw a stacked bar plot in which positive contributions
+            # are stacked on the positive semiaxis and negative 
+            # contributions are stacked on the negative semiaxis
+            ax = subdfcontr.plot(kind = "bar", **bconfigbars)
+
+            # get the positions of the ticks on the y-axis
+            yticks = generate_ticks_positions(values = yvalues, \
+                                              config = yconfigint)
+
+            # generate text annotations with the total ΔΔG scores
+            # that will appear on the top of the bars
+            generate_barplot_annotations(ax = ax, \
+                                         config = bconfigannot, \
+                                         sumpos = subsumpos, \
+                                         total = subdftotal, \
+                                         yticks = yticks)
+
+            # generate an horizontal line that passes through
+            # y coordinate 0.0
+            generate_axhline(ax = ax, \
+                             config = axhconfig, \
+                             df = subdftotal)
+
+            # add the legend
+            generate_legend(ax = ax, \
+                            config = lconfig)
+
+            # set the x-axis
+            set_axis(ax = ax, \
+                     axis = "x", \
+                     config = xconfig, \
+                     ticks = xticks, \
+                     ticklabels = xticklabels)
+
+            # set the y-axis
+            set_axis(ax = ax, \
+                     axis = "y", \
+                     config = yconfig, \
+                     ticks = yticks)
+
+            # for top and right spine of the plot
+            for spine in ["top", "right"]:
+                # hide it
+                ax.spines[spine].set_visible(False)
+
+            # save the figure to the PDF page
+            pdf.savefig(**outconfig)
+            # clear the figure
+            plt.clf()
+            # close the current figure window
+            plt.close()
