@@ -937,6 +937,11 @@ def write_mutinfofile(mutations, outdir, mutinfofile):
             # get the attributes of the mutation
             chain, wtr, numr, mutr = \
                 operator.itemgetter(*keys)(mut[MUT][0])
+            # strip Rosetta identifiers of NCAA from the name
+            # of the residues (so that it is consistent with
+            # what it is written in the mutations' list file)
+            wtr = wtr.strip("X[]")
+            mutr = mutr.strip("X[]")
             # if the directory has not been created yet
             if not dirname in dirnames:
                 # compose the mutation name            

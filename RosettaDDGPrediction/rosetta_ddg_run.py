@@ -422,13 +422,16 @@ def main():
                 # write out the file mapping the directory
                 # names to the mutations
                 futures.append(\
-                    client.submit(util.write_mutinfofile, \
-                                  mutations = mutations, \
-                                  outdir = stepwd, \
-                                  mutinfofile = mutoptions["mutinfofile"]))
+                    client.submit(\
+                        util.write_mutinfofile, \
+                        mutations = mutations, \
+                        outdir = stepwd, \
+                        mutinfofile = mutoptions["mutinfofile"]))
 
-                # log the order in which the mutations will be performed
-                mutlist = [mut[MUTDIRNAME] for mut in mutations]
+                # log the order in which the mutations 
+                # will be performed
+                _mutlist = [m[MUTDIRNAME] for m in mutations]
+                mutlist = [m for m in list(dict.fromkeys(_mutlist))]
                 logstr = f"The following mutations will be " \
                          f"performed:\n{', '.join(mutlist)}."
                 log.info(logstr)
