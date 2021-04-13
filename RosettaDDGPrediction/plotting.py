@@ -434,7 +434,7 @@ def plot_total_heatmap(df, \
         # automatically placed
         yticks = None
         # the x-axis tick labels will be the residue positions
-        positions = poslabelcol.unique()
+        positions = df[poslabelcol].unique()
         # reorder the dataframe columns according to the positions
         finaldf = finaldf[positions]
 
