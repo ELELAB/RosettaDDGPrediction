@@ -393,9 +393,9 @@ def main():
             try:
                 dfs = \
                     client.submit(\
-                        aggregation.aggregate_data_flexddg(\
+                        aggregation.aggregate_data_flexddg, \
                         df = pd.concat(structdfs), \
-                        listcontributions = listcontributions)).result()
+                        listcontributions = listcontributions).result()
             # if something went wrong, report it and exit
             except Exception as e:
                 errstr = f"Could not aggregate data for " \
