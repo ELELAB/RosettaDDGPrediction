@@ -387,7 +387,7 @@ def main():
                     continue
                 
                 # append the dataframe to the list
-                structdfs.append(df)
+                structdfs.append(df.result())
 
             # try to generate the aggregated dataframes            
             try:
