@@ -376,11 +376,11 @@ def main():
                 # try to create a dataframe from the .db3 output file
                 try:
                     df = client.submit(\
-                            aggregation.parse_output_flexddg(\
+                            aggregation.parse_output_flexddg, \
                             db3out = db3out, \
                             trajstride = trajstride, \
                             structnum = structnum, \
-                            scfname = scfname))
+                            scfname = scfname)
                 # if something went wrong, report it and continue
                 except Exception as e:
                     log.warning(f"Could not parse {db3out}: {e}")
