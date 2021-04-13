@@ -146,43 +146,40 @@ def main():
     # get the configuration to be used when outputting the plot
     outconfig = configplot.get("output", {})
 
-
-    # try to generate the plot
-    #try:
-
-        # if the plot is a heatmap of total scores
+        
+    # if the plot is a heatmap of total scores
     if plottype == "total_heatmap":
-            # load the aggregated data
+        # load the aggregated data
         df = plotting.load_aggregated_data(infile = infile)
-            # plot the heatmap
+        # plot the heatmap
         plotting.plot_total_heatmap(df = df, \
-                                        config = config, \
-                                        outfile = outfile, \
-                                        outconfig = outconfig)
+                                    config = config, \
+                                    outfile = outfile, \
+                                    outconfig = outconfig)
 
-        # if the plot is a heatmap for a saturation mutagenesis scan
+    # if the plot is a heatmap for a saturation mutagenesis scan
     elif plottype == "total_heatmap_saturation":
-            # load the aggregated data
+        # load the aggregated data
         df = plotting.load_aggregated_data(infile = infile, \
-                                               saturation = True)
-            # plot the 2D heatmap
+                                           saturation = True)
+        # plot the 2D heatmap
         plotting.plot_total_heatmap(df = df, \
-                                        config = config, \
-                                        outfile = outfile, \
-                                        outconfig = outconfig, \
-                                        saturation = True)
+                                    config = config, \
+                                    outfile = outfile, \
+                                    outconfig = outconfig, \
+                                    saturation = True)
 
-        # if the plot is a barplot dividing the total ΔΔG score
-        # into its energy contributions
+    # if the plot is a barplot dividing the total ΔΔG score
+    # into its energy contributions
     elif plottype == "contributions_barplot":
-            # load the aggregated data
+        # load the aggregated data
         df = plotting.load_aggregated_data(infile = infile)
-            # get the scoring function name
+        # get the scoring function name
         scfname = df[ROSETTADFCOLS["scfname"]].unique()[0]
-            # get the list of energy cntributions for the scoring
-            # function used
+        # get the list of energy cntributions for the scoring
+        # function used
         contributions = configaggr["energy_contributions"][scfname]
-            # plot the bar plot
+        # plot the bar plot
         outconfig.pop("format")
         plotting.plot_contributions_barplot(\
                                     df = df, \
@@ -191,29 +188,22 @@ def main():
                                     outfile = outfile, \
                                     outconfig = outconfig)
 
-        # if the plot is a swarmplot showing the distributions of
-        # total ΔG scores for all wild-type and mutant structures
+    # if the plot is a swarmplot showing the distributions of
+    # total ΔG scores for all wild-type and mutant structures
     elif plottype == "dg_swarmplot":
-            # load the aggregated data
+        # load the aggregated data
         df = plotting.load_aggregated_data(infile = infile)
-            # plot the swarmplot 
+        # plot the swarmplot 
         plotting.plot_dg_swarmplot(df = df, \
-                                       config = config, \
-                                       outfile = outfile, \
-                                       outconfig = outconfig)
+                                   config = config, \
+                                   outfile = outfile, \
+                                   outconfig = outconfig)
 
-        # if an invalid plot type was passed, report it and exit
+    # if an invalid plot type was passed, report it and exit
     else:
         errstr = f"Unrecognized plot type {plottype}."
         log.error(errstr)
         sys.exit(errstr)
-
-
-    # if something went wrong, report it and exit
-    #except Exception as e:
-    #    errstr = f"Could not generate the {plottype} plot: {e}"
-    #    log.error(errstr)
-    #    sys.exit(errstr)
 
 
 if __name__ == "__main__":

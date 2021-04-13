@@ -433,6 +433,10 @@ def plot_total_heatmap(df, \
         # set y-axis ticks to None so that ticks are
         # automatically placed
         yticks = None
+        # the x-axis tick labels will be the residue positions
+        positions = poslabelcol.unique()
+        # reorder the dataframe columns according to the positions
+        finaldf = finaldf[positions]
 
     # if the data are not from a saturation mutagenesis scan
     else:
