@@ -6,7 +6,7 @@
 #    Hard-coded defaults. Should only be changed
 #    for development purposes.
 #
-#    Copyright (C) 2020 Valentina Sora 
+#    Copyright (C) 2022 Valentina Sora 
 #                       <sora.valentina1@gmail.com>
 #                       Matteo Tiberti 
 #                       <matteo.tiberti@gmail.com> 
@@ -28,7 +28,7 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 
 
-# standard library
+# Standard library
 import collections
 import os.path
 from pkg_resources import resource_filename, Requirement
@@ -39,41 +39,44 @@ from pkg_resources import resource_filename, Requirement
 
 
 
-# recognized protocols
-ROSETTAPROTOCOLS = \
+# Recognized protocols
+ROSETTA_PROTOCOLS = \
     {"flexddg" : \
-        {"flexddg" : {"role" : "ddg", \
-                      "runby" : "rosetta", \
-                      "executable" : "rosetta_scripts"}}, \
+        {"flexddg" : {"role" : "ddg",
+                      "run_by" : "rosetta",
+                      "executable" : "rosetta_scripts"}},
     "cartddg" : \
-        {"relax" : {"role" : "processing", \
-                    "runby" : "rosetta", \
-                    "executable" : "relax"}, \
-         "structure_selection" : {"runby" : "python"}, \
-         "cartesian" : {"role" : "ddg", \
-                        "runby" : "rosetta", \
-                        "executable" : "cartesian_ddg"}}, \
-    }
+        {"relax" : {"role" : "processing",
+                    "run_by" : "rosetta",
+                    "executable" : "relax"},
+         "structure_selection" : {"run_by" : "python"},
+         "cartesian" : {"role" : "ddg",
+                        "run_by" : "rosetta",
+                        "executable" : "cartesian_ddg"}}}
 
 
-# possible ways of defining various Rosetta options that
+# Possible ways of defining various Rosetta options that
 # are needed to correctly retrieve files/parameters
-ROSETTAOPTIONS = \
-    collections.defaultdict(str,\
-        {"ddgout" : ("-ddg:out", "-out"), \
-         "inpdbfile" : ("-in:file:s", "-s"), \
-         "mutfile" : ("-ddg:mut_file", "-mut_file"), \
-         "outprefix" : ("-out:prefix", "-prefix"), \
-         "outsuffix" : ("-out:suffix", "-suffix"), \
-         "scriptvars" : ("-parser:script_vars", "-script_vars"), \
-         "scorefile" : ("-out:file:scorefile", "-scorefile"), \
-         "scfname" : ("-score:weights", "-weights", "scfname"), \
-         "backrubntrials" : ("backrubntrials",), \
-         "backrubtrajstride" : ("backrubtrajstride",), \
-         "ddgdbfile" : ("ddgdbfile",), \
-         "protocol" : ("-parser:protocol", "-protocol"), \
-         "resfile" : ("resfile",), \
-         "structdbfile" : ("structdbfile",)})
+ROSETTA_OPTIONS = \
+    collections.defaultdict(str,
+        {"ddg_out" : ("-ddg:out", "-out"),
+         "in_pdb_file" : ("-in:file:s", "-s"),
+         "mutfile" : ("-ddg:mut_file", "-mut_file"),
+         "out_prefix" : ("-out:prefix", "-prefix"),
+         "out_suffix" : ("-out:suffix", "-suffix"),
+         "script_vars" : ("-parser:script_vars", "-script_vars"),
+         "scorefile" : ("-out:file:scorefile", "-scorefile"),
+         "scf_name" : ("-score:weights", "-weights", "scfname"),
+         "backrub_n_trials" : ("backrubntrials",),
+         "backrub_traj_stride" : ("backrubtrajstride",),
+         "ddg_db_file" : ("ddgdbfile",),
+         "protocol" : ("-parser:protocol", "-protocol"),
+         "resfile" : ("resfile",),
+         "struct_db_file" : ("structdbfile",)})
+
+
+# Default name for the Rosetta crash log
+ROSETTA_CRASH_LOG = "ROSETTA_CRASH.log"
 
 
 
@@ -81,33 +84,33 @@ ROSETTAOPTIONS = \
 
 
 
-# directory containing configuration files for running the protocols
-CONFIGRUNDIR = \
-    resource_filename(Requirement("RosettaDDGPrediction"), \
+# Directory containing configuration files for running the protocols
+CONFIG_RUN_DIR = \
+    resource_filename(Requirement("RosettaDDGPrediction"),
                       "RosettaDDGPrediction/config_run")
 
-# directory containing configuration files for aggregating results
-CONFIGAGGRDIR = \
-    resource_filename(Requirement("RosettaDDGPrediction"), \
+# Directory containing configuration files for aggregating results
+CONFIG_AGGR_DIR = \
+    resource_filename(Requirement("RosettaDDGPrediction"),
                       "RosettaDDGPrediction/config_aggregate")
 
-# directory containing configuration files for plotting
-CONFIGPLOTDIR = \
-    resource_filename(Requirement("RosettaDDGPrediction"), \
+# Directory containing configuration files for plotting
+CONFIG_PLOT_DIR = \
+    resource_filename(Requirement("RosettaDDGPrediction"),
                       "RosettaDDGPrediction/config_plot")
 
-# directory containing configuration files for run settings
-CONFIGSETTINGSDIR = \
-    resource_filename(Requirement("RosettaDDGPrediction"), \
+# Directory containing configuration files for run settings
+CONFIG_SETTINGS_DIR = \
+    resource_filename(Requirement("RosettaDDGPrediction"),
                       "RosettaDDGPrediction/config_settings")
 
-# directory containing RosettaScripts used in some protocols
-ROSETTASCRIPTSDIR = \
-    resource_filename(Requirement("RosettaDDGPrediction"), \
-                    "RosettaDDGPrediction/RosettaScripts")
+# Directory containing RosettaScripts used in some protocols
+ROSETTA_SCRIPTS_DIR = \
+    resource_filename(Requirement("RosettaDDGPrediction"),
+                      "RosettaDDGPrediction/RosettaScripts")
 
-# default configuration file for data aggregation
-CONFIGAGGRFILE = os.path.join(CONFIGAGGRDIR, "aggregate.yaml")
+# Default configuration file for data aggregation
+CONFIG_AGGR_FILE = os.path.join(CONFIG_AGGR_DIR, "aggregate.yaml")
 
 
 
@@ -115,86 +118,90 @@ CONFIGAGGRFILE = os.path.join(CONFIGAGGRDIR, "aggregate.yaml")
 
 
 
-### keywords used to refer to specific mutation attributes
+# Keywords used to refer to specific mutation attributes
 
-# mutation (maps to as many dictionaries as the single mutations
+# Mutation (maps to as many dictionaries as the single mutations
 # defined)
 MUT = "_mut_"
 
-# structure number/ID (in case the same mutation must be performed
+# Structure number/ID (in case the same mutation must be performed
 # multiple times on the same structure to obtain an ensemble)
 STRUCT = "_struct_"
 
-# wild-type residue in a single mutation
+# Wild-type residue in a single mutation
 WTR = "_wtr_"
 
-# mutant residue in a single mutation
+# Mutant residue in a single mutation
 MUTR = "_mutr_"
 
-# residue number in a single mutation
+# Residue number in a single mutation
 NUMR = "_numr_"
 
-# chain ID in a single mutation
+# Chain ID in a single mutation
 CHAIN = "_chain_"
 
-# all attributes that defines the position of the
-# residue
+# All attributes that defines the position of the residue
 # (chain ID, wild-type residue and residue number)
 POSR = "_nomutr_"
 
-# mutation directory path
-MUTDIRPATH = "_dirpath_"
+# Mutation directory path
+MUT_DIR_PATH = "_dirpath_"
 
-# mutation directory name
-MUTDIRNAME = "_dirname_"
+# Mutation directory name
+MUT_DIR_NAME = "_dirname_"
 
-# separator for mutations that are performed simultaneously    
-MUTSEP = ","
+# Separator for mutations that are performed simultaneously    
+MUT_SEP = ","
 
-# separator for the components of a mutation
+# Separator for the components of a mutation
 # (e.g. C.L.53.E for mutating L53 on chain C to E)
-COMPSEP = "."
+COMP_SEP = "."
 
-# separator for chain ID and the rest of the mutation (wild-type
+# Separator for chain ID and the rest of the mutation (wild-type
 # residue, residue number and mutant residue) in the directory name
-CHAINSEP = "-"
+CHAIN_SEP = "-"
 
-# separator for single mutations in the directory name (in case of
+# Separator for single mutations in the directory name (in case of
 # multiple simultaneous mutations)
-DIRMUTSEP = "_"
+DIR_MUT_SEP = "_"
+
+# Separator for multiple mutations in the mutinfo file
+MULTI_MUT_SEP = ":"
 
 
 
 ############################# AGGREGATION #############################
 
 
-# column names in the mutations' info file
-MUTINFOCOLS = {"mutname" : "mutname", \
-               "dirname" : "dirname", \
-               "mutlabel" : "mutlabel", \
-               "poslabel" : "poslabel"}
 
-# column names in Rosetta .db3 files and aggregated dataframes
-ROSETTADFCOLS = {"bsteps" : "backrub_steps", \
-                 "energyunit" : "energy_unit", \
-                 "mutation" : "mutation", \
-                 "mutlabel" : "mutation_label", \
-                 "poslabel" : "position_label", \
-                 "name" : "name", \
-                 "nstruct" : "nstruct", \
-                 "scfname" : "score_function_name", \
-                 "sctype" : "score_type_name", \
-                 "scvalue" : "score_value", \
-                 "state" : "state", \
-                 "structid" : "struct_id", \
-                 "structnum" : "struct_num", \
-                 "totscore" : "total_score"}
+# Column names in the mutations' info file
+MUTINFO_COLS = {"mut_name" : "mut_name",
+                "dir_name" : "dir_name",
+                "mut_label" : "mut_label",
+                "pos_label" : "pos_label"}
+
+# Column names in Rosetta .db3 files and aggregated dataframes
+ROSETTA_DF_COLS = {"b_steps" : "backrub_steps",
+                   "energy_unit" : "energy_unit",
+                   "mutation" : "mutation",
+                   "mut_label" : "mutation_label",
+                   "pos_label" : "position_label",
+                   "name" : "name",
+                   "n_struct" : "nstruct",
+                   "scf_name" : "score_function_name",
+                   "sc_type" : "score_type_name",
+                   "sc_value" : "score_value",
+                   "state" : "state",
+                   "struct_id" : "struct_id",
+                   "struct_num" : "struct_num",
+                   "tot_score" : "total_score"}
 
 
 
 ############################### PLOTTING ##############################
 
 
-# valid plot types
-PLOTTYPES = ["contributions_barplot", "dg_swarmplot", \
-             "total_heatmap", "total_heatmap_saturation"]
+
+# Valid plot types
+PLOT_TYPES = ["contributions_barplot", "dg_swarmplot",
+              "total_heatmap", "total_heatmap_saturation"]

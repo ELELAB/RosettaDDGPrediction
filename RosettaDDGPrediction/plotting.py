@@ -5,7 +5,7 @@
 #
 #    Utility functions for plotting.
 #
-#    Copyright (C) 2020 Valentina Sora 
+#    Copyright (C) 2022 Valentina Sora 
 #                       <sora.valentina1@gmail.com>
 #                       Matteo Tiberti 
 #                       <matteo.tiberti@gmail.com> 
@@ -28,11 +28,11 @@
 
 
 
-# standard library
+# Standard library
 import collections
 import operator
 import re
-# third-party packages
+# Third-party packages
 from matplotlib.backends.backend_pdf import PdfPages
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
@@ -42,11 +42,11 @@ import seaborn as sns
 # RosettaDDGProtocols
 from .defaults import (
     CHAIN,
-    CHAINSEP,
-    COMPSEP,
+    CHAIN_SEP,
+    COMP_SEP,
     MUTR,
     NUMR,
-    ROSETTADFCOLS, 
+    ROSETTA_DF_COLS, 
     WTR
 )
 from .util import ( 
@@ -60,41 +60,48 @@ from .util import (
 
 
 
-def load_aggregated_data(infile, saturation = False):
-    """Load aggregated data from a CSV file."""
+def load_aggregated_data(in_file,
+                         saturation = False):
+    """Load aggregated data from a CSV file.
+    """
 
-    # columns containing data of interest in the aggregated
+    # Columns containing data of interest in the aggregated
     # dataframe
-    mutationcol = ROSETTADFCOLS["mutation"]
+    mutation_col = ROSETTA_DF_COLS["mutation"]
 
-    # load the dataframe
-    df = pd.read_csv(infile)
+    # Load the dataframe
+    df = pd.read_csv(in_file)
 
-    # if the aggregated data are from a saturation mutagenesis
+    # If the aggregated data are from a saturation mutagenesis
     # scan
     if saturation:
-        # create new columns 
-        newcols = pd.DataFrame(\
-                    df[mutationcol].str.split(COMPSEP, 3).tolist(), \
-                    columns = [CHAIN, WTR, NUMR, MUTR])
-        # add the new columns
-        df = pd.concat([df, newcols], axis = 1)
+        
+        # Create new columns 
+        new_cols = \
+            pd.DataFrame(\
+                df[mutation_col].str.split(COMP_SEP, 3).tolist(),
+                columns = [CHAIN, WTR, NUMR, MUTR])
+        
+        # Add the new columns
+        df = pd.concat([df, new_cols], axis = 1)
 
-    # return the dataframe
+    # Return the dataframe
     return df
+
 
 
 ############################# AESTHETICS ##############################
 
 
 
-def generate_ticks_positions(values, config):
+def generate_ticks_positions(values,
+                             config):
     """Generate the positions that the ticks
     will have on a plot axis/colorbar/etc.
     """
     
-    # get the configurations
-    inttype = config.get("type")
+    # Get the configurations
+    int_type = config.get("type")
     rtn = config.get("round_to_nearest")
     top = config.get("top")
     bottom = config.get("bottom")
@@ -102,282 +109,370 @@ def generate_ticks_positions(values, config):
     spacing = config.get("spacing")
     ciz = config.get("center_in_zero")
     
-    # if no rounding has been specified and the
+    # If no rounding has been specified and the
     # interval is continuous
-    if not rtn and inttype == "continuous":
-        # default to rounding to the nearest 0.5
+    if rtn is None and int_type == "continuous":
+        
+        # Default to rounding to the nearest 0.5
         rtn = 0.5
 
-    # if the maximum of the ticks interval has not
+    # If the maximum of the ticks interval has not
     # been specified
-    if not top:
-        if inttype == "discrete":
-            # default top value is the maximum
+    if top is None:
+        
+        if int_type == "discrete":
+            # Default top value is the maximum
             # of the values provided
             top = int(max(values))
-        elif inttype == "continuous":
-            # default top value is the rounded up 
+        elif int_type == "continuous":
+            # Default top value is the rounded up 
             # maximum of the values
             top = np.ceil(max(values)*(1/rtn))/(1/rtn)
 
-    # if the minimum of the ticks interval has not
+    # If the minimum of the ticks interval has not
     # been specified
-    if not bottom:
-        if inttype == "discrete":
-            # default bottom value is the minimum
+    if bottom is None:
+        
+        if int_type == "discrete":
+            # Default bottom value is the minimum
             # of the values provided
             bottom = int(min(values))
-        elif inttype == "continuous":
-            # default bottom value is the rounded down 
+        elif int_type == "continuous":
+            # Default bottom value is the rounded down 
             # minimum of the values
             bottom = np.floor(min(values)*(1/rtn))/(1/rtn)
 
-    # if the number of steps the interval should have
+    # If the number of steps the interval should have
     # has not been specified
-    if not steps:
-        if inttype == "discrete":
-            # default number of steps is the 
+    if steps is None:
+        
+        if int_type == "discrete":
+            # Default number of steps is the 
             # number of values provided
             steps = 1
-        elif inttype == "continuous":
-            # default is 5 steps
+        elif int_type == "continuous":
+            # Default is 5 steps
             steps = 5
 
-    # if the interval spacing has not been specified
-    if not spacing:
-        if inttype == "discrete":
-            # default spacing is the one between two steps,
+    # If the interval spacing has not been specified
+    if spacing is None:
+        
+        if int_type == "discrete":
+            # Default spacing is the one between two steps,
             # rounded up
-            spacing = int(np.ceil(np.linspace(bottom, \
-                                              top, \
-                                              steps, \
-                                              retstep = True)[1]))
-        elif inttype == "continuous":
-            # default spacing is the one between two steps
-            spacing = np.linspace(bottom, \
-                                  top, \
-                                  steps, \
+            spacing = \
+                int(np.ceil(np.linspace(bottom,
+                                        top,
+                                        steps,
+                                        retstep = True)[1]))
+        elif int_type == "continuous":
+            # Default spacing is the one between two steps
+            spacing = np.linspace(bottom,
+                                  top,
+                                  steps,
                                   retstep = True)[1]
 
-    # if the two extremes of the interval coincide
+    # If the two extremes of the interval coincide
     if top == bottom:
-        # return only one value
+        
+        # Return only one value
         return np.array([bottom])
 
-    # if the interval needs to be centered in zero
+    # If the interval needs to be centered in zero
     if ciz:
-        # get the highest absolute value
-        absval = np.ceil(top) if top > bottom \
-                 else np.floor(bottom)
-        # top and bottom will be opposite numbers with
+        
+        # Get the highest absolute value
+        absval = \
+            np.ceil(top) if top > bottom else np.floor(bottom)
+        
+        # Top and bottom will be opposite numbers with
         # absolute value equal to absval
         top, bottom = absval, -absval
-        # return an evenly spaced interval
+        
+        # Return an evenly spaced interval
         # between top and bottom values
         return np.linspace(bottom, top, steps)
 
-    # return the ticks interval
+    # Return the ticks interval
     return np.arange(bottom, top + spacing, spacing)
 
 
-def generate_heatmap_annotations(df, config):
+def generate_heatmap_annotations(df,
+                                 config):
     """Generate the annotations to be plotted on 
     a heatmap (each cell is annotated with the
     corresponding value).
     """
 
-    # if the configuration is empty
+    # If the configuration is empty
     if config == dict():
-        # return a tuple filled with None values
+        # Return a tuple filled with None values
         return (None, None)
 
-    # get the configuration for the style of the annotations
+    # Get the configuration for the style of the annotations
     # and for the number of decimals to be kept in the
     # annotations
     annot = config.get("annot")
-    ndecimals = config.get("ndecimals", 2)
-    # if no annotation is requested, leave the dictionary
+    n_decimals = config.get("ndecimals", 2)
+    
+    # If no annotation is requested, leave the dictionary
     # for the annotation properties empty
-    annotkws = {}
+    annot_kws = {}
 
-    # if annotations are requested
+    # If annotations are requested
     if config.get("annot"):
-        # create a function to set the annotations 
+        
+        # Create a function to set the annotations 
         # to the desired precision
-        annotfunc = lambda x : np.around(x, ndecimals) 
-        # vectorize the function
-        annottransform = np.vectorize(annotfunc)
-        # create annotations for all cells of the heatmap
-        annot = annottransform(df.values)
-        # get the style of the annotations
-        annotkws = config["style"]
+        annot_func = lambda x : np.around(x, n_decimals) 
+        
+        # Vectorize the function
+        annot_transform = np.vectorize(annot_func)
+        
+        # Create annotations for all cells of the heatmap
+        annot = annot_transform(df.values)
+        
+        # Get the style of the annotations
+        annot_kws = config["style"]
 
-    # return annotations and style
-    return (annot, annotkws)
+    # Return annotations and style
+    return (annot, annot_kws)
 
 
-def generate_barplot_annotations(ax, config, sumpos, total, yticks):
+def generate_barplot_annotations(ax,
+                                 config,
+                                 sum_pos,
+                                 total,
+                                 yticks):
     """Generate annotations to be plotted over the
     bars of a bar plot.
     """
 
-    # get whether the annotations are requested or not
+    # Get whether the annotations are requested or not
     annot = config.get("annot")
-    # get the number of decimals to be kept in the annotations
-    ndecimals = config.get("ndecimals")
-    # get the style of the annotations
+    
+    # Get the number of decimals to be kept in the annotations
+    n_decimals = config.get("ndecimals")
+    
+    # Get the style of the annotations
     style = config.get("style")
 
-    # if the annotation is requested
+    # Initialize an empty list to store annotations
     annots = []
+
+    # If the annotation is requested   
     if annot:
-        # get the spacing between two ticks on the y-axis
+        
+        # Get the spacing between two ticks on the y-axis
         spacing = yticks[1] - yticks[0]
-        # for each bar
-        for patch, psum, score in zip(ax.patches, sumpos, total):
-            # get the position of the annotation on the x-axis
+        
+        # For each bar
+        for patch, p_sum, score in zip(ax.patches, sum_pos, total):
+            
+            # Get the position of the annotation on the x-axis
             # (centered on the bar)
             x = patch.get_x() + patch.get_width()/2.0
-            # get the position of the annotation on the y-axis
+            
+            # Get the position of the annotation on the y-axis
             # (slightly above the bar)
-            y = psum + spacing/5
-            # round the annotation to the desired precision
-            s = round(score, ndecimals)
-            # add the annotation over the corresponding bar
+            y = p_sum + spacing/5
+            
+            # Round the annotation to the desired precision
+            s = round(score, n_decimals)
+            
+            # Add the annotation over the corresponding bar
             ax.text(x, y, s, **style)
 
 
-def generate_axhline(ax, config, df):
-    """Generate a horizontal line passing through 0.0."""
+def generate_axhline(ax,
+                     config,
+                     df):
+    """Generate a horizontal line passing through 0.0.
+    """
     
-    # set the intercept of the line
+    # Set the intercept of the line
     y = 0
-    # set the length of the line
+    
+    # Set the length of the line
     xmax = (len(df) - 0.25) / len(df)
-    # plot the line
-    plt.axhline(y = y, \
-                xmax = xmax, \
+    
+    # Plot the line
+    plt.axhline(y = y,
+                xmax = xmax,
                 **config)
 
 
-def generate_colorbar(mappable, \
-                      ticks, \
+def generate_colorbar(mappable,
+                      ticks,
                       config):
     """Generate a colorbar associated to a mappable
     (for example, a heatmap).
     """
  
-    # plot the colorbar
+    # Plot the colorbar
     cbar = plt.colorbar(mappable, **config["colorbar"])
 
-    # if there is an axis label
-    if config["label"].get("ylabel"):
-        # set the colorbar label     
+    # Get the colorbar orientation
+    orient = config["colorbar"].get("orientation") if \
+             config["colorbar"].get("orientation") is not None \
+             else "vertical"
+
+    # If there is an axis label (horizontal orientation)
+    if config["label"].get("xlabel"):
+        # Set the colorbar label  
+        cbar.ax.set_xlabel(**config.get("label"))
+    
+    # If there is an axis label (vertical orientation)
+    elif config["label"].get("ylabel"):
+        # Set the colorbar label     
         cbar.ax.set_ylabel(**config.get("label"))
     
-    # set the colorbar ticks and ticks labels
-    # setting ticks on cbar.ax raises a UserWarning, but setting
-    # tick labels does not
+    # Set the colorbar ticks and ticks labels
+    # setting ticks on cbar.ax raises a UserWarning,
+    # but setting tick labels does not
     cbar.set_ticks(ticks)
-    cbar.ax.set_yticklabels(ticks, **config.get("ticklabels"))
 
-    # return the colorbar
+    # Format the ticklabels (can behave weirdly if the position
+    # of a tick is represented by a number which has no precise
+    # binary representation)
+    ticklabels = [f"{float(np.round(t,2)):g}" for t in ticks]
+    
+    # If the orientation of the colorbar is horizontal
+    if orient == "horizontal":
+        # Set the x-axis ticks
+        cbar.ax.set_xticklabels(ticklabels,
+                                **config.get("ticklabels"))
+
+    # If the orientation of the colorbar is vertical
+    elif orient == "vertical":
+        # Set the y-axis ticks
+        cbar.ax.set_yticklabels(ticklabels,
+                                **config.get("ticklabels"))
+
+    # Return the colorbar
     return cbar
 
 
-def generate_legend(ax, config):
-    """Generate a legend for the current plot."""
+def generate_legend(ax,
+                    config):
+    """Generate a legend for the current plot.
+    """
 
-    # get legend handles and labels
+    # Get legend handles and labels
     handles, labels = ax.get_legend_handles_labels()
-    # draw the legend
-    ax.legend(handles = handles, \
-              labels = labels, \
-              bbox_transform = plt.gcf().transFigure, \
+    
+    # Draw the legend
+    ax.legend(handles = handles,
+              labels = labels,
+              bbox_transform = plt.gcf().transFigure,
               **config)
 
-    # retutn the ax the legend has been plotted on
+    # Retutn the ax the legend has been plotted on
     return ax
 
 
-def generate_mask_nancells(ax, cells, config):
+def generate_mask_nancells(ax,
+                           cells,
+                           config):
     """Generate a mask to mark differently cells
     in a heatmap containing NaN values.
     """
 
-    # for each NaN cell
+    # For each NaN cell
     for y,x in cells:
-        # add a rectangulat patch over the cell
+        
+        # Add a rectangulat patch over the cell
         ax.add_patch(mpatches.Rectangle(xy = (x,y), **config))
 
-    # return the ax the patches have been plotted on
+    # Return the ax the patches have been plotted on
     return ax
 
 
-def set_axis(ax, \
-             axis, \
-             config, \
-             ticks = None, \
+def set_axis(ax,
+             axis,
+             config,
+             ticks = None,
              ticklabels = None):
-    """Set up the x- or y-axis."""
+    """Set up the x- or y-axis.
+    """
     
+    # If no tick positions were provided
     if ticks is None:
+        
         if axis == "x":
-            # default to the tick locations already present
+            # Default to the tick locations already present
             ticks = plt.xticks()[0]
+        
         elif axis == "y":
-            # default to the tick locations already present
+            # Default to the tick locations already present
             ticks = plt.yticks()[0]
     
+    # If no tick labels were provided
     if ticklabels is None:
-        # default to the string representations
+        
+        # Default to the string representations
         # of the ticks' locations
         ticklabels = [str(t) for t in ticks]
 
-    # set the tick labels
-    ticklabelsconfig = {}
+    # Set the tick labels' configuration
+    ticklabels_config = {}
     if config.get("ticklabels"):
-        ticklabelsconfig = config["ticklabels"]
+        ticklabels_config = config["ticklabels"]
     
-    # if it is the x-axis
+    # If it is the x-axis
     if axis == "x":    
-        # if there is an axis label
+        
+        # If there is an axis label
         if config.get("label"):
-            # set the axis label
+            
+            # Set the axis label
             ax.set_xlabel(**config["label"])        
-        # set the ticks
+        
+        # Set the ticks
         ax.set_xticks(ticks = ticks)        
-        # set the tick labels
-        ax.set_xticklabels(labels = ticklabels, \
-                           **ticklabelsconfig)
+        
+        # Set the tick labels
+        ax.set_xticklabels(labels = ticklabels,
+                           **ticklabels_config)
+        
+        # If tick positions were provided
         if ticks != []:      
-            # set the axis boundaries
-            ax.spines["bottom"].set_bounds(ticks[0], \
+            
+            # Set the axis boundaries
+            ax.spines["bottom"].set_bounds(ticks[0],
                                            ticks[-1])
     
-    # if it is the y-axis
+    # If it is the y-axis
     elif axis == "y":        
-        # if there is an axis label
+        
+        # If there is an axis label
         if config.get("label"):
-            # set the axis label
+            
+            # Set the axis label
             ax.set_ylabel(**config["label"])        
-        # set the ticks
+        
+        # Set the ticks
         ax.set_yticks(ticks = ticks)        
-        # set the tick labels
-        ax.set_yticklabels(labels = ticklabels, \
-                           **ticklabelsconfig)
+        
+        # Set the tick labels
+        ax.set_yticklabels(labels = ticklabels,
+                           **ticklabels_config)
+        
+        # If tick positions were provided
         if ticks != []:       
-            # set the axis boundaries
-            ax.spines["left"].set_bounds(ticks[0], \
+            
+            # Set the axis boundaries
+            ax.spines["left"].set_bounds(ticks[0],
                                          ticks[-1])
 
-    # if a configuration for the tick parameters was provided
+    # If a configuration for the tick parameters was provided
     if config.get("tick_params"):
-        # apply the configuration to the ticks
-        ax.tick_params(axis = axis, \
+        
+        # Apply the configuration to the ticks
+        ax.tick_params(axis = axis,
                        **config["tick_params"])
 
-    # return the axis
+    # Return the axis
     return ax
 
 
@@ -386,10 +481,10 @@ def set_axis(ax, \
 
 
 
-def plot_total_heatmap(df, \
-                       config, \
-                       outfile, \
-                       outconfig, \
+def plot_total_heatmap(df,
+                       config,
+                       out_file,
+                       out_config,
                        saturation = False):
     """Plot either:
 
@@ -401,250 +496,278 @@ def plot_total_heatmap(df, \
       which a saturation mutagenesis scan was performed.
     """
     
-    # clear the figure
+    # Clear the figure
     plt.clf()
+
+    # Close the current figure window
+    plt.close()
 
 
     #----------------------- Data preprocessing ----------------------#
 
 
-    # get the names of the columns of the aggregate dataframe
+    # Get the names of the columns of the aggregate data frame
     # containing data of interest
-    mutationcol = ROSETTADFCOLS["mutation"]
-    poslabelcol = ROSETTADFCOLS["poslabel"]
-    mutlabelcol = ROSETTADFCOLS["mutlabel"]
-    statecol = ROSETTADFCOLS["state"] 
-    totscorecol = ROSETTADFCOLS["totscore"]
+    mutation_col = ROSETTA_DF_COLS["mutation"]
+    pos_label_col = ROSETTA_DF_COLS["pos_label"]
+    mut_label_col = ROSETTA_DF_COLS["mut_label"]
+    state_col = ROSETTA_DF_COLS["state"] 
+    tot_score_col = ROSETTA_DF_COLS["tot_score"]
     
-    # if the data are from a saturation mutagenesis scan
+    # If the data are from a saturation mutagenesis scan
     if saturation:
-        # take only the total ΔΔG values
-        finaldf = df[df[statecol] == "ddg"][[poslabelcol, \
-                                             MUTR, totscorecol]]
-        # create a dataframe where rows are positions (identified
+        
+        # Take only the total ΔΔG values
+        final_df = df[df[state_col] == "ddg"][[pos_label_col,
+                                               MUTR, tot_score_col]]
+        
+        # Create a data frame where rows are positions (identified
         # by all mutation elements that are not the mutated residue,
         # such as chain, residue number and wild-type residue) and
         # columns are mutated residues
-        finaldf = finaldf.pivot(index = poslabelcol, \
-                                columns = MUTR, \
-                                values = totscorecol).transpose()
-        # y-axis tick labels will be the row names
-        yticklabels = finaldf.index.values.tolist()
-        # set y-axis ticks to None so that ticks are
+        final_df = final_df.pivot(index = pos_label_col,
+                                  columns = MUTR,
+                                  values = tot_score_col).transpose()
+        
+        # Y-axis tick labels will be the row names
+        y_ticklabels = final_df.index.values.tolist()
+        
+        # Set y-axis ticks to None so that ticks are
         # automatically placed
-        yticks = None
-        # the x-axis tick labels will be the residue positions
-        positions = df[poslabelcol].unique()
-        # reorder the dataframe columns according to the positions
-        finaldf = finaldf[positions]
+        y_ticks = None
+        
+        # The x-axis tick labels will be the residue positions
+        positions = df[pos_label_col].unique()
+        
+        # Reorder the data frame columns according to the positions
+        final_df = final_df[positions]
 
-    # if the data are not from a saturation mutagenesis scan
+    # If the data are not from a saturation mutagenesis scan
     else:
-        # keep only the label column and total score
-        finaldf = df[df[statecol] == "ddg"][[mutlabelcol, totscorecol]]
-        # set the mutations as index, drop the column containing
+        
+        # Keep only the label column and total score
+        final_df = \
+            df[df[state_col] == "ddg"][[mut_label_col, tot_score_col]]
+        
+        # Set the mutations as index, drop the column containing
         # them and transpose the dataframe so that the mutations
         # are on the x-axis
-        finaldf = finaldf.set_index(mutlabelcol).transpose()
-        # the y-axis should have neither ticks nor tick labels,
+        final_df = final_df.set_index(mut_label_col).transpose()
+        
+        # The y-axis should have neither ticks nor tick labels,
         # since the heatmap will have only one row
-        yticks, yticklabels = [], []
+        y_ticks, y_ticklabels = [], []
 
-    # x-axis tick labels will be the column names
-    xticklabels = finaldf.columns.values.tolist()
-    # flatten the array so that we are dealing only with
+    # X-axis tick labels will be the column names
+    x_ticklabels = final_df.columns.values.tolist()
+    
+    # Flatten the array so that we are dealing only with
     # a list of values
-    values = finaldf.values.flatten()
-    # drop NaN values, values shown on the y-axis will be 
+    values = final_df.values.flatten()
+    
+    # Drop NaN values, values shown on the y-axis will be 
     # the total ΔΔG values
-    yvalues = values[~np.isnan(values)]
-    # get the cells where the value is NaN (mutations for
+    y_values = values[~np.isnan(values)]
+    
+    # Get the cells where the value is NaN (mutations for
     # which the ΔΔG is not available, i.e. if you have run
     # an incomplete saturation mutagenesis on some positions)
-    nancells = np.argwhere(np.isnan(finaldf.values))
+    nan_cells = np.argwhere(np.isnan(final_df.values))
 
 
     #------------------------- Configuration -------------------------#
     
     
-    # get the configuration for the heatmap, colorbar, NaN cells,
+    # Get the configuration for the heatmap, colorbar, NaN cells,
     # x- and y-axis
-    hconfig, cconfig, nanconfig, xconfig, yconfig = \
+    h_config, c_config, nan_config, x_config, y_config = \
         get_items(config, ("heatmap", "colorbar", "nancells", 
                   "xaxis", "yaxis"), {})
 
-    # get the configuration for the heatmap grid and for the
+    # Get the configuration for the heatmap grid and for the
     # annotations
-    hconfigheat, hconfigannot = \
-        get_items(hconfig, ("heatmap", "annot"), {})
+    h_config_heat, h_config_annot = \
+        get_items(h_config, ("heatmap", "annot"), {})
 
-    # get the configuration for the interval to be represented
+    # Get the configuration for the interval to be represented
     # on the colorbar
-    cconfigint = \
-        get_items(cconfig, ("interval",), {})[0]
+    c_config_int = \
+        get_items(c_config, ("interval",), {})[0]
 
 
     #----------------------------- Plot ------------------------------#
 
 
-    # get the colorbar ticks positions
-    cticks = generate_ticks_positions(values = yvalues, \
-                                      config = cconfigint)
+    # Get the colorbar ticks positions
+    c_ticks = generate_ticks_positions(values = y_values,
+                                       config = c_config_int)
     
-    # get maximum and minimum value from the interval
-    vmin, vmax = cticks[0], cticks[-1]
+    # Get maximum and minimum value from the interval
+    vmin, vmax = c_ticks[0], c_ticks[-1]
 
-    # generate the heatmap annotations
-    annots = generate_heatmap_annotations(df = finaldf, \
-                                          config = hconfigannot)
+    # Generate the heatmap annotations
+    annots = generate_heatmap_annotations(df = final_df,
+                                          config = h_config_annot)
 
-    # generate the heatmap
-    ax = sns.heatmap(data = finaldf, \
-                     cbar = False, \
-                     annot = annots[0], \
-                     annot_kws = annots[1], \
-                     vmin = vmin, \
-                     vmax = vmax, \
-                     center = (vmax+vmin)/2, \
-                     **hconfigheat)
+    # Generate the heatmap
+    ax = sns.heatmap(data = final_df,
+                     cbar = False,
+                     annot = annots[0],
+                     annot_kws = annots[1],
+                     vmin = vmin,
+                     vmax = vmax,
+                     center = (vmax+vmin)/2,
+                     **h_config_heat)
     
-    # add a mask to the NaN cells
-    generate_mask_nancells(ax = ax, \
-                           cells = nancells, \
-                           config = nanconfig)
+    # Add a mask to the NaN cells
+    generate_mask_nancells(ax = ax,
+                           cells = nan_cells,
+                           config = nan_config)
 
-    # add the colorbar to the heatmap
-    generate_colorbar(mappable = ax.get_children()[0], \
-                      ticks = cticks, \
-                      config = cconfig)
+    # Add the colorbar to the heatmap
+    generate_colorbar(mappable = ax.get_children()[0],
+                      ticks = c_ticks, \
+                      config = c_config)
 
-    # set the x-axis
-    set_axis(ax = ax, \
-             axis = "x", \
-             ticklabels = xticklabels, \
-             config = xconfig)
+    # Set the x-axis
+    set_axis(ax = ax,
+             axis = "x",
+             ticklabels = x_ticklabels,
+             config = x_config)
 
-    # set the y-axis
-    set_axis(ax = ax, \
-             axis = "y", \
-             ticks = yticks, \
-             ticklabels = yticklabels, \
-             config = yconfig)
+    # Set the y-axis
+    set_axis(ax = ax,
+             axis = "y",
+             ticks = y_ticks,
+             ticklabels = y_ticklabels,
+             config = y_config)
 
-    # for top and right spine of the plot
+    # For top and right spine of the plot
     for spine in ["top", "right"]:
-        # hide it
+        
+        # Hide it
         ax.spines[spine].set_visible(False)
 
-    # save the plot to the output file
-    plt.savefig(outfile, **outconfig)
+    # Save the plot to the output file
+    plt.savefig(out_file, **out_config)
 
 
 
-def plot_dg_swarmplot(df, config, outfile, outconfig):
+def plot_dg_swarmplot(df,
+                      config,
+                      out_file,
+                      out_config):
     """Plot a swarmplot showing, for each mutation, the ΔG score of
     each wild-type and mutant structure present in the ensemble of
     structures generated by the protocol.
     """
     
-    # clear the figure
+    # Clear the figure
     plt.clf()
+
+    # Close the current figure window
+    plt.close()
 
 
     #----------------------- Data preprocessing ----------------------#
 
     
-    # get the names of the columns of the dataframe
+    # Get the names of the columns of the data frame
     # containing data of interest
-    mutlabelcol = ROSETTADFCOLS["mutlabel"]
-    statecol = ROSETTADFCOLS["state"]
-    structnumcol = ROSETTADFCOLS["structnum"]
-    totscorecol = ROSETTADFCOLS["totscore"]
+    mut_label_col = ROSETTA_DF_COLS["mut_label"]
+    state_col = ROSETTA_DF_COLS["state"]
+    struct_num_col = ROSETTA_DF_COLS["struct_num"]
+    tot_score_col = ROSETTA_DF_COLS["tot_score"]
 
-    # take both wild type and mutant ΔG values, but
+    # Take both wild type and mutant ΔG values, but
     # not ΔΔG values
-    df = df.loc[df[statecol].isin(["wt", "mut"])]
-    # create a new dataframe containing only the 
-    # columns of interest
-    df = df[[mutlabelcol, totscorecol, \
-             statecol, structnumcol]]
-
-    # get the x-axis tick labels
-    xticklabels = df[mutlabelcol].unique()
-    # get the x-axis tick positions
-    xticks = range(len(xticklabels))
+    df = df.loc[df[state_col].isin(["wt", "mut"])]
     
-    # numeric values of interest will be the ΔG values
-    yvalues = df[totscorecol].values.flatten()
-    # set x, y and hue columns that will be used
+    # Create a new data frame containing only the 
+    # columns of interest
+    df = \
+        df[[mut_label_col, tot_score_col,
+            state_col, struct_num_col]]
+
+    # Get the x-axis tick labels
+    x_ticklabels = df[mut_label_col].unique()
+    
+    # Get the x-axis tick positions
+    x_ticks = range(len(x_ticklabels))
+    
+    # Numeric values of interest will be the ΔG values
+    y_values = df[tot_score_col].values.flatten()
+    
+    # Set x, y and hue columns that will be used
     # to generate the swarmplot
-    x, y, hue = mutlabelcol, totscorecol, statecol
+    x, y, hue = mut_label_col, tot_score_col, state_col
 
 
     #------------------------- Configuration -------------------------#
 
 
-    # get the configuration for the swarmplot, the legend, the x- and
+    # Get the configuration for the swarmplot, the legend, the x- and
     # the y-axis
-    sconfig, lconfig, xconfig, yconfig = \
-        get_items(config, ("swarmplot", "legend", "xaxis", "yaxis"), \
+    s_config, l_config, x_config, y_config = \
+        get_items(config, ("swarmplot", "legend", "xaxis", "yaxis"),
                   {})
 
-    # get the configuration for the interval to be represented
+    # Get the configuration for the interval to be represented
     # on the x-axis
-    xconfigint = xconfig.get("interval", {})
+    x_config_int = x_config.get("interval", {})
 
-    # get the configuration for the interval to be represented
+    # Get the configuration for the interval to be represented
     # on the y-axis
-    yconfigint = yconfig.get("interval", {})
+    y_config_int = y_config.get("interval", {})
 
 
     #----------------------------- Plot ------------------------------#
 
 
-    # get the positions of the ticks on the y-axis
-    yticks = generate_ticks_positions(values = yvalues, \
-                                      config = yconfigint)
+    # Get the positions of the ticks on the y-axis
+    y_ticks = generate_ticks_positions(values = y_values,
+                                       config = y_config_int)
 
-    # generate the swarmplot
-    ax = sns.swarmplot(data = df, \
-                       x = x, \
-                       y = y, \
-                       hue = hue, \
-                       **sconfig)
+    # Generate the swarmplot
+    ax = sns.swarmplot(data = df,
+                       x = x,
+                       y = y,
+                       hue = hue,
+                       **s_config)
 
-    # add the legend
-    generate_legend(ax = ax, \
-                    config = lconfig)
+    # Add the legend
+    generate_legend(ax = ax,
+                    config = l_config)
 
-    # set the x-axis
-    set_axis(ax = ax, \
-             axis = "x", \
-             config = xconfig, \
-             ticks = xticks, \
-             ticklabels = xticklabels)
+    # Set the x-axis
+    set_axis(ax = ax,
+             axis = "x",
+             config = x_config,
+             ticks = x_ticks,
+             ticklabels = x_ticklabels)
 
-    # set the y-axis
-    set_axis(ax = ax, \
-             axis = "y", \
-             config = yconfig, \
-             ticks = yticks)
+    # Set the y-axis
+    set_axis(ax = ax,
+             axis = "y",
+             config = y_config,
+             ticks = y_ticks)
 
-    # for top and right spine of the plot
+    # For top and right spine of the plot
     for spine in ["top", "right"]:
-        # hide it
+        
+        # Hide it
         ax.spines[spine].set_visible(False)
 
-    # save the plot to the output file
-    plt.savefig(outfile, **outconfig)
+    # Save the plot to the output file
+    plt.savefig(out_file, **out_config)
 
 
 
-def plot_contributions_barplot(df, \
-                               config, \
-                               contributions, \
-                               outfile, \
-                               outconfig):
+def plot_contributions_barplot(df,
+                               config,
+                               contributions,
+                               out_file,
+                               out_config):
     """Plot a bar plot with stacked bars representing the different
     energy contributions making up the total ΔΔG scores. 
     Positive contributions are stacked upon the y positive
@@ -652,148 +775,160 @@ def plot_contributions_barplot(df, \
     the y negative semiaxis.
     """
 
-    # clear the figure
+    # Clear the figure
     plt.clf()
+
+    # Close the current figure window
+    plt.close()
 
 
     #----------------------- Data preprocessing ----------------------#
 
     
-    # get the names of the columns of the dataframe
+    # Get the names of the columns of the data frame
     # containing data of interest
-    mutlabelcol = ROSETTADFCOLS["mutlabel"]
-    poslabelcol = ROSETTADFCOLS["poslabel"]
-    statecol = ROSETTADFCOLS["state"]
-    totscorecol = ROSETTADFCOLS["totscore"]
+    mut_label_col = ROSETTA_DF_COLS["mut_label"]
+    pos_label_col = ROSETTA_DF_COLS["pos_label"]
+    state_col = ROSETTA_DF_COLS["state"]
+    tot_score_col = ROSETTA_DF_COLS["tot_score"]
 
-    # get the total ΔΔG values
-    dftotal = df[df[statecol] == "ddg"][totscorecol]
-    # get the values for all energy contributions
-    dfcontr = df[df[statecol] == "ddg"][contributions]
+    # Get the total ΔΔG values
+    df_total = df[df[state_col] == "ddg"][tot_score_col]
+
+    # Get the values for all energy contributions
+    df_contr = df[df[state_col] == "ddg"][contributions]
     
-    # retrieve the sum of all positive contributions and of all 
+    # Retrieve the sum of all positive contributions and of all 
     # negative contributions per each case (= row). Will be used to 
     # position the labels over the stacked bars and to set the y 
     # axis limits.
-    sumpos = []
-    sumneg = []
-    for casename, data in dfcontr.iterrows():
-        sumpos.append(data[data>0].sum())
-        sumneg.append(data[data<0].sum())
+    sum_pos = []
+    sum_neg = []
+    for case_name, data in df_contr.iterrows():
+        sum_pos.append(data[data>0].sum())
+        sum_neg.append(data[data<0].sum())
 
-    # values represented on the y-axis should span the entire
+    # Values represented on the y-axis should span the entire
     # range of values, from the lowest negative to the highest
     # positive
-    yvalues = sumpos + sumneg
+    y_values = sum_pos + sum_neg
 
 
     #------------------------- Configuration -------------------------#
 
 
-    # get the configuration for the bar plot, the legend, the line
+    # Get the configuration for the bar plot, the legend, the line
     # marking y coordinate 0.0 and the x- and the y-axis
-    bconfig, lconfig, axhconfig, xconfig, yconfig = \
-        get_items(config, \
-                  ("barplot", "legend", "axhline", "xaxis", "yaxis"), \
+    b_config, l_config, axh_config, x_config, y_config = \
+        get_items(config,
+                  ("barplot", "legend", "axhline", "xaxis", "yaxis"),
                   {})
 
-    # get the configuration for the bars and for the annotations
+    # Get the configuration for the bars and for the annotations
     # displayed over the bars
-    bconfigbars, bconfigannot = \
-        get_items(bconfig, ("bars", "annot"), {})
+    b_config_bars, b_config_annot = \
+        get_items(b_config, ("bars", "annot"), {})
 
-    # get the configuration for the interval that will be
+    # Get the configuration for the interval that will be
     # represented on the y-axis
-    yconfigint = yconfig.get("interval", {})
+    y_config_int = y_config.get("interval", {})
 
 
     #----------------------------- Plot ------------------------------#
 
     
-    # open the multi-page PDF
-    with PdfPages(outfile) as pdf:
+    # Open the multi-page PDF
+    with PdfPages(out_file) as pdf:
 
-        # get the unique positions
-        positions = df[poslabelcol].unique().tolist()
-        # set the number of pages of the PDF equal to the
+        # Get the unique positions
+        positions = df[pos_label_col].unique().tolist()
+        
+        # Set the number of pages of the PDF equal to the
         # number of positions scanned
-        numpages = len(positions)
+        num_pages = len(positions)
 
-        # for each page
-        for page in range(numpages):
+        # For each page
+        for page in range(num_pages):
 
-            # create a new figure
+            # Create a new figure
             plt.figure()
 
-            # get a sub-dataframe of the original one containing
+            # Get a sub-data frame of the original one containing
             # data only for the current position of interest
-            subdf = df.loc[df[poslabelcol] == positions[page]]
+            sub_df = df.loc[df[pos_label_col] == positions[page]]
 
-            # the labels of the ticks on the x-axis will be the names
+            # The labels of the ticks on the x-axis will be the names
             # of the mutations
-            xticklabels = subdf[mutlabelcol].unique()
+            x_ticklabels = sub_df[mut_label_col].unique()
 
-            # get the positions of the ticks on the x-axis
-            xticks = range(len(xticklabels))
+            # Get the positions of the ticks on the x-axis
+            x_ticks = range(len(x_ticklabels))
 
-            # get the energy contributions for the current position
-            subdfcontr = subdf[subdf[statecol] == "ddg"][contributions]
-            # get the total scores for the current position
-            subdftotal = subdf[subdf[statecol] == "ddg"][totscorecol]
-            # get the sum of total positive contributions for the
+            # Get the energy contributions for the current position
+            sub_df_contr = \
+                sub_df[sub_df[state_col] == "ddg"][contributions]
+            
+            # Get the total scores for the current position
+            sub_df_total = \
+                sub_df[sub_df[state_col] == "ddg"][tot_score_col]
+            
+            # Get the sum of total positive contributions for the
             # mutations of the current position
-            subsumpos = []
-            for casename, data in subdfcontr.iterrows():
-                subsumpos.append(data[data>0].sum())
+            sub_sum_pos = []
+            for case_name, data in sub_df_contr.iterrows():
+                sub_sum_pos.append(data[data>0].sum())
 
-            # draw a stacked bar plot in which positive contributions
+            # Draw a stacked bar plot in which positive contributions
             # are stacked on the positive semiaxis and negative 
             # contributions are stacked on the negative semiaxis
-            ax = subdfcontr.plot(kind = "bar", **bconfigbars)
+            ax = sub_df_contr.plot(kind = "bar", **b_config_bars)
 
-            # get the positions of the ticks on the y-axis
-            yticks = generate_ticks_positions(values = yvalues, \
-                                              config = yconfigint)
+            # Get the positions of the ticks on the y-axis
+            y_ticks = generate_ticks_positions(values = y_values,
+                                               config = y_config_int)
 
-            # generate text annotations with the total ΔΔG scores
+            # Generate text annotations with the total ΔΔG scores
             # that will appear on the top of the bars
-            generate_barplot_annotations(ax = ax, \
-                                         config = bconfigannot, \
-                                         sumpos = subsumpos, \
-                                         total = subdftotal, \
-                                         yticks = yticks)
+            generate_barplot_annotations(ax = ax,
+                                         config = b_config_annot,
+                                         sum_pos = sub_sum_pos,
+                                         total = sub_df_total,
+                                         yticks = y_ticks)
 
-            # generate an horizontal line that passes through
+            # Generate an horizontal line that passes through
             # y coordinate 0.0
-            generate_axhline(ax = ax, \
-                             config = axhconfig, \
-                             df = subdftotal)
+            generate_axhline(ax = ax,
+                             config = axh_config,
+                             df = sub_df_total)
 
-            # add the legend
-            generate_legend(ax = ax, \
-                            config = lconfig)
+            # Add the legend
+            generate_legend(ax = ax,
+                            config = l_config)
 
-            # set the x-axis
-            set_axis(ax = ax, \
-                     axis = "x", \
-                     config = xconfig, \
-                     ticks = xticks, \
-                     ticklabels = xticklabels)
+            # Set the x-axis
+            set_axis(ax = ax,
+                     axis = "x",
+                     config = x_config,
+                     ticks = x_ticks,
+                     ticklabels = x_ticklabels)
 
-            # set the y-axis
-            set_axis(ax = ax, \
-                     axis = "y", \
-                     config = yconfig, \
-                     ticks = yticks)
+            # Set the y-axis
+            set_axis(ax = ax,
+                     axis = "y",
+                     config = y_config,
+                     ticks = y_ticks)
 
-            # for top and right spine of the plot
+            # For top and right spine of the plot
             for spine in ["top", "right"]:
-                # hide it
+                
+                # Hide it
                 ax.spines[spine].set_visible(False)
 
-            # save the figure to the PDF page
-            pdf.savefig(**outconfig)
-            # clear the figure
+            # Save the figure to the PDF page
+            pdf.savefig(**out_config)
+            
+            # Clear the figure
             plt.clf()
-            # close the current figure window
+            
+            # Close the current figure window
             plt.close()

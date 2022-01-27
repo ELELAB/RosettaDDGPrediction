@@ -6,7 +6,7 @@
 #    Utility functions to clean up unnecessary files after
 #    running a protocol.
 #
-#    Copyright (C) 2020 Valentina Sora 
+#    Copyright (C) 2022 Valentina Sora 
 #                       <sora.valentina1@gmail.com>
 #                       Matteo Tiberti 
 #                       <matteo.tiberti@gmail.com> 
@@ -28,88 +28,105 @@
 #    If not, see <http://www.gnu.org/licenses/>.
 
 
-# standard library
+# Standard library
 import os
 # RosettaDDGPrediction
 from . import util
 
 
 
-def clean_folders(process, stepname, wd, options, level):
+def clean_folders(process,
+                  step_name,
+                  wd,
+                  options,
+                  level):
     """Clean up folders after having run a protocol step.
 
     NB: 'process' is passed to ensure it is finished before
     the cleaning starts (because of the Dask task graph).
     """
 
-    # if the step is 'relax' (cartddg protocols)
-    if stepname == "relax":
-        cleanfunc = clean_relax
-    # if the step is 'cartesian' (cartddg protocols)
-    elif stepname == "cartesian":
-        cleanfunc = clean_cartesian
-    # if the step is 'flexddg' (flexddg protocols)
-    elif stepname == "flexddg":
-        cleanfunc = clean_flexddg
-    # call the appropriate cleaning function
-    cleanfunc(wd = wd, \
-              options = options, \
-              level = level)
+    # If the step is 'relax' (cartddg protocols)
+    if step_name == "relax":
+        clean_func = clean_relax
+    
+    # If the step is 'cartesian' (cartddg protocols)
+    elif step_name == "cartesian":
+        clean_func = clean_cartesian
+    
+    # If the step is 'flexddg' (flexddg protocols)
+    elif step_name == "flexddg":
+        clean_func = clean_flexddg
+    
+    # Call the appropriate cleaning function
+    clean_func(wd = wd,
+               options = options,
+               level = level)
 
 
-def clean_relax(wd, options, level):
-    """Clean the folder where the 'relax' step was run."""
+def clean_relax(wd,
+                options,
+                level):
+    """Clean the folder where the 'relax' step was run.
+    """
 
-    # no cleaning procedure has been implemented so far
+    # No cleaning procedure has been implemented so far
     if level is not None:
         errstr = "No cleaning procedure for 'relax' has " \
                  "been implemented yet."
         raise NotImplementedError(errstr)    
 
 
-def clean_cartesian(wd, options, level):
-    """Clean the folders where the 'cartesian' step was run."""
+def clean_cartesian(wd,
+                    options,
+                    level):
+    """Clean the folders where the 'cartesian' step was run.
+    """
 
-    # simply return if no cleaning was requested
+    # Simply return if no cleaning was requested
     if level is None:
         return
 
-    # if ony removal of PDB files has been requested
+    # If the removal of PDB files has been requested
     elif level == "pdb":
         for item in os.listdir(wd):
-            # remove all PDB files
+            # Remove all PDB files
             if item.endswith(".pdb"):
                 os.remove(item)            
 
 
-def clean_flexddg(wd, options, level):
-    """Clean the folders where the 'flexddg' step was run."""
+def clean_flexddg(wd,
+                  options,
+                  level):
+    """Clean the folders where the 'flexddg' step was run.
+    """
 
-    # simply return if no cleaning was requested
+    # Simply return if no cleaning was requested
     if level is None:
         return
     
-    # if some cleaning has been requested
+    # If some cleaning has been requested
     elif level in ["structdbfile", "all"]:
 
-        # get the RosettaScript options 
-        rscriptoptions = \
-            options[util.get_option_key(options = options, \
+        # Get the RosettaScript options 
+        r_script_options = \
+            options[util.get_option_key(options = options,
                                         option = "scriptvars")]
-        # get the struct DB file name
-        structdbname = \
-            rscriptoptions[\
-                util.get_option_key(options = rscriptoptions, \
+        # Get the struct DB file name
+        struct_db_name = \
+            r_script_options[\
+                util.get_option_key(options = r_script_options,
                                     option = "structdbfile")]
         
-        # get the struct DB file path
-        structdbfile = os.path.join(wd, structdbname)
-        # remove the struct DB file
-        os.remove(structdbfile)
+        # Get the struct DB file path
+        struct_db_file = os.path.join(wd, struct_db_name)
+        
+        # Remove the struct DB file
+        os.remove(struct_db_file)
 
-        # if the deepest level of cleaning has been requested
+        # If the deepest level of cleaning has been requested
         if level == "all":
             for item in os.listdir(wd):
-                # remove also PDB files and scorefiles
+                # Remove also PDB files and scorefiles
                 if item.endswith(".pdb") or item.endswith(".sc"):
                     os.remove(item)

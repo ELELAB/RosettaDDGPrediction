@@ -7,7 +7,7 @@
 #    stability upon mutation of a monomeric protein or the
 #    ΔΔG of binding upon mutation of a protein complex.
 #
-#    Copyright (C) 2020 Valentina Sora 
+#    Copyright (C) 2022 Valentina Sora 
 #                       <sora.valentina1@gmail.com>
 #                       Matteo Tiberti 
 #                       <matteo.tiberti@gmail.com> 
@@ -30,24 +30,24 @@
 
 
 
-# standard library
+# Standard library
 import argparse
 import logging as log
 import os
 import os.path
 import sys
-# third-party packages
+# Third-party packages
 import dask
 from distributed import Client, LocalCluster
 import yaml
 # RosettaDDGProtocols
 from . import cleaning
 from .defaults import (
-    CONFIGRUNDIR,
-    CONFIGSETTINGSDIR,
-    MUTDIRNAME,
-    MUTDIRPATH,
-    ROSETTAPROTOCOLS
+    CONFIG_RUN_DIR,
+    CONFIG_SETTINGS_DIR,
+    MUT_DIR_NAME,
+    MUT_DIR_PATH,
+    ROSETTA_PROTOCOLS
 )
 from . import pythonsteps
 from . import util
@@ -67,68 +67,70 @@ def main():
         "stability upon mutation of a monomeric protein or the " \
         "ΔΔG of binding upon mutation of a protein complex.\n"
 
-    # create the argument parser
+    # Create the argument parser
     parser = argparse.ArgumentParser(description = description)
-    generalargs = parser.add_argument_group("General arguments")
-    satargs = parser.add_argument_group("Saturation-related arguments")
+    general_args = \
+        parser.add_argument_group("General arguments")
+    sat_args = \
+        parser.add_argument_group("Saturation-related arguments")
 
 
     #---------------------------- General ----------------------------#
  
 
     p_help = "PDB file of the wild-type structure."
-    generalargs.add_argument("-p", "--pdbfile", \
-                             type = str, \
-                             required = True, \
-                             help = p_help)
+    general_args.add_argument("-p", "--pdbfile",
+                              type = str,
+                              required = True,
+                              help = p_help)
 
     cr_help = f"Configuration file of the protocol to be " \
               f"run. If it is a name without extension, it is " \
               f"assumed to be the name of a YAML file in " \
-              f"{CONFIGRUNDIR}."
-    generalargs.add_argument("-cr", "--configfile-run", \
-                             type = str, \
-                             required = True, \
+              f"{CONFIG_RUN_DIR}."
+    general_args.add_argument("-cr", "--configfile-run",
+                             type = str,
+                             required = True,
                              help = cr_help)
 
     cs_help = \
         f"Configuration file containing settings to be used for " \
         f"the run. If it is a name without extension, it is assumed " \
-        f"to be the name of a YAML file in {CONFIGSETTINGSDIR}. "
-    generalargs.add_argument("-cs", "--configfile-settings", \
-                             type = str, \
-                             required = True, \
-                             help = cs_help)
+        f"to be the name of a YAML file in {CONFIG_SETTINGS_DIR}. "
+    general_args.add_argument("-cs", "--configfile-settings",
+                              type = str,
+                              required = True,
+                              help = cs_help)
 
     r_help = "Path to the Rosetta installation directory."
-    generalargs.add_argument("-r", "--rosettapath", \
-                             type = str, \
-                             required = True, \
-                             help = r_help)
+    general_args.add_argument("-r", "--rosettapath",
+                              type = str,
+                              required = True,
+                              help = r_help)
 
     d_help = \
         "Directory where the protocol will be run. " \
         "Default is the current working directory."
-    generalargs.add_argument("-d", "--rundir", \
-                             type = str, \
-                             default = os.getcwd(), \
-                             help = d_help)
+    general_args.add_argument("-d", "--rundir",
+                              type = str,
+                              default = os.getcwd(),
+                              help = d_help)
 
     l_help = \
         "File containing the list of selected mutations " \
         "(or positions to perform saturation mutagenesis)."
-    generalargs.add_argument("-l", "--listfile", \
-                             type = str, \
-                             default = None, \
-                             help = l_help)
+    general_args.add_argument("-l", "--listfile",
+                              type = str,
+                              default = None,
+                              help = l_help)
 
     n_help = \
         "Number of processes to be started in parallel. " \
         "Default is one process (no parallelization)."
-    generalargs.add_argument("-n", "--nproc", \
-                             type = int, \
-                             default = 1, \
-                             help = n_help)
+    general_args.add_argument("-n", "--nproc",
+                              type = int,
+                              default = 1,
+                              help = n_help)
 
 
     #-------------------- Saturation mutagenesis ---------------------#
@@ -136,32 +138,35 @@ def main():
 
     saturation_help = \
         "Perform saturation mutagenesis on selected positions."
-    satargs.add_argument("--saturation", \
-                         action = "store_true", \
-                         help = saturation_help)
+    sat_args.add_argument("--saturation",
+                          action = "store_true",
+                          help = saturation_help)
 
     reslistfile_help = \
         "File containing the list of residue types to be included " \
         "in the saturation mutagenesis It is used only if " \
         "--saturation is provided."
-    satargs.add_argument("--reslistfile", \
-                         type = str, \
-                         default = None, \
-                         help = reslistfile_help)
+    sat_args.add_argument("--reslistfile",
+                          type = str,
+                          default = None,
+                          help = reslistfile_help)
 
-    # collect the arguments
+    # Collect the arguments
     args = parser.parse_args()
-    # files
-    pdbfile = util.get_abspath(args.pdbfile)
-    rosettapath = util.get_abspath(args.rosettapath)
-    rundir = util.get_abspath(args.rundir)
-    listfile = util.get_abspath(args.listfile)
-    reslistfile = util.get_abspath(args.reslistfile)
-    # configuration files
-    configfilerun = args.configfile_run
-    configfilesettings = args.configfile_settings
-    # others
-    nproc = args.nproc
+    
+    # Files
+    pdb_file = util.get_abspath(args.pdbfile)
+    rosetta_path = util.get_abspath(args.rosettapath)
+    run_dir = util.get_abspath(args.rundir)
+    list_file = util.get_abspath(args.listfile)
+    res_list_file = util.get_abspath(args.reslistfile)
+    
+    # Configuration files
+    config_file_run = args.configfile_run
+    config_file_settings = args.configfile_settings
+    
+    # Others
+    n_proc = args.nproc
     saturation = args.saturation
 
 
@@ -170,7 +175,7 @@ def main():
 
 
 
-    # basic logging configuration
+    # Basic logging configuration
     log.basicConfig(level = log.INFO)
 
 
@@ -179,11 +184,14 @@ def main():
 
 
 
-    # ensure that if the saturation mutagenesis was
+    # Ensure that if the saturation mutagenesis was
     # requested, a reslistfile has been passed
-    if saturation and reslistfile is None:
-        errstr = "You requested a saturation mutagenesis " \
-                 "scan but did not provide a reslistfile."
+    if saturation and res_list_file is None:
+        
+        errstr = \
+            "You requested a saturation mutagenesis scan but did " \
+            "not provide a file containing residue types to be " \
+            "included in the scan."
         log.error(errstr)
         sys.exit(errstr)
 
@@ -193,21 +201,24 @@ def main():
 
 
 
-    # try to get the run settings from the default YAML file
+    # Try to get the run settings from the default YAML file
     try:
-        settings = util.get_config_settings(configfilesettings)
-    # if something went wrong, report it and exit
+        
+        settings = util.get_config_settings(config_file_settings)
+    
+    # If something went wrong, report it and exit
     except Exception as e:
+        
         errstr = f"Could not parse the configuration file " \
-                 f"{configfilesettings}: {e}"
+                 f"{config_file_settings}: {e}"
         log.error(errstr)
         sys.exit(errstr)
 
-    # create the local cluster
-    cluster = LocalCluster(n_workers = nproc, \
+    # Create the local cluster
+    cluster = LocalCluster(n_workers = n_proc,
                            **settings["localcluster"])
     
-    # open the client from the cluster
+    # Open the client from the cluster
     client = Client(cluster)
 
 
@@ -216,33 +227,36 @@ def main():
 
 
     
-    # try to get the protocol options from the YAML file
+    # Try to get the protocol options from the YAML file
     try:
-        options = client.submit(util.get_config_run, \
-                                configfile = configfilerun).result()
-    # if something went wrong, report it and exit
+        
+        options = client.submit(util.get_config_run,
+                                config_file = config_file_run).result()
+    
+    # If something went wrong, report it and exit
     except Exception as e:
+        
         errstr = f"Could not parse the configuration " \
-                 f"file {configfilerun}: {e}"
+                 f"file {config_file_run}: {e}"
         log.error(errstr)
         sys.exit(errstr)
     
-    # get the protocol steps
+    # Get the protocol steps
     steps = options["steps"]
 
-    # get the protocol family
+    # Get the protocol family
     family = options["family"]
 
-    # get the full Rosetta path to the executables (path to
+    # Get the full Rosetta path to the executables (path to
     # where Rosetta is installed + path to where Rosetta
     # executables are usually stored)
-    execpath = os.path.join(rosettapath, \
-                            settings["rosetta"]["execpath"])
+    exec_path = os.path.join(rosetta_path,
+                             settings["rosetta"]["execpath"])
 
-    # get the suffix the Rosetta executables of interest should
+    # Get the suffix the Rosetta executables of interest should
     # have (it differs according to whether they support MPI,
     # the compiler used, etc.)
-    execsuffix = settings["rosetta"]["execsuffix"]
+    exec_suffix = settings["rosetta"]["execsuffix"]
     
 
 
@@ -250,57 +264,64 @@ def main():
 
  
 
-    # try to load the PDB file
+    # Try to load the PDB file
     try:
-        # set the current PDB file to the PDB passed by the user
+        
+        # Set the current PDB file to the PDB passed by the user
         # (after checking it)
-        currpdbfile = client.submit(util.check_pdbfile, \
-                                    pdbfile = pdbfile, \
-                                    **options["pdb"]).result()
-    # if something went wrong, report it and exit
+        curr_pdb_file = client.submit(util.check_pdb_file,
+                                      pdb_file = pdb_file,
+                                      **options["pdb"]).result()
+    
+    # If something went wrong, report it and exit
     except Exception as e:
-        errstr = f"Could not load the PDB file {pdbfile}: {e}"
+        
+        errstr = f"Could not load the PDB file {pdb_file}: {e}"
         log.error(errstr)
         sys.exit(errstr)
     
-    
-    # if the file with the list of mutations was passed
-    if listfile:
+    # If the file with the list of mutations was passed
+    if list_file:
         
-        # try to retrieve the options to be used for
+        # Try to retrieve the options to be used for
         # handling mutations
         try:
-            mutoptions = options["mutations"]
+            
+            mut_options = options["mutations"]
 
-        # if something went wrong, report it and exit
+        # If something went wrong, report it and exit
         except KeyError:
+            
             errstr = f"No options to handle mutations found in " \
-                     f"the configuration file {configfilerun}."
+                     f"the configuration file {config_file_run}."
             log.error(errstr)
             sys.exit(errstr)
         
-        # try to generate the list of mutations
+        # Try to generate the list of mutations
         try:
-            mutations = \
+            
+            mutations, mutations_original = \
                 client.submit(\
-                    util.get_mutations, \
-                        listfile = listfile, \
-                        reslistfile = reslistfile, \
-                        pdbfile = currpdbfile, \
-                        resnumbering = mutoptions["resnumbering"], \
-                        extra = mutoptions["extra"], \
-                        nstruct = mutoptions["nstruct"]).result()
+                    util.get_mutations,
+                        list_file = list_file,
+                        res_list_file = res_list_file,
+                        pdb_file = curr_pdb_file,
+                        res_numbering = mut_options["resnumbering"],
+                        extra = mut_options["extra"],
+                        n_struct = mut_options["nstruct"]).result()
         
-        # if something went wrong, report it and exit
+        # If something went wrong, report it and exit
         except Exception as e:
+            
             errstr = f"Could not generate the list of mutations: {e}"
             log.error(errstr)
             sys.exit(errstr)
     
-    # if no list of mutations was passed
+    # If no list of mutations was passed
     else:
-        # no mutations will be performed
-        mutations = [] 
+        
+        # No mutations will be performed
+        mutations, mutations_original = [], [] 
 
 
 
@@ -308,310 +329,338 @@ def main():
 
 
     
-    # create an empty list to keep track of the running futures
+    # Create an empty list to keep track of the running futures
     futures = [] 
 
-    
-    # for each step of the protocol that has to be run
-    for stepname, step in steps.items():
+    # For each step of the protocol that has to be run
+    for step_name, step in steps.items():
 
-        # if there are still pending futures from the previous step
+        # If there are still pending futures from the previous step
         if futures:
-            # gather them
+            
+            # Gather them
             client.gather(futures)
-            # clear the list of pending futures
+            
+            # Clear the list of pending futures
             futures = []            
         
-        # get the step options
-        stepopts = step["options"]
+        # Get the step options
+        step_opts = step["options"]
 
-        # get the step features (hard-coded, they define what
+        # Get the step features (hard-coded, they define what
         # the step is internally)
-        stepfeatures = ROSETTAPROTOCOLS[family][stepname]
+        step_features = ROSETTA_PROTOCOLS[family][step_name]
 
+        # If the step is run via Rosetta commands
+        if step_features["run_by"] == "rosetta":
 
-        # if the step is run via Rosetta commands
-        if stepfeatures["runby"] == "rosetta":
+            # Get the step cleaning level
+            clean_level = step["cleanlevel"]
 
-            # get the step cleaning level
-            cleanlevel = step["cleanlevel"]
+            # Get the role of the step
+            role = step_features["role"]
 
-            # get the role of the step
-            role = stepfeatures["role"]
+            # Get the executable needed to run the step
+            executable = step_features["executable"]
 
-            # get the executable needed to run the step
-            executable = stepfeatures["executable"]
-
-            # if the specified directory was "."
+            # If the specified directory was "."
             if step["wd"] == ".":
-                # run in the current directory without generating
+                
+                # Run in the current directory without generating
                 # a sub-directory for the current step
-                stepwd = rundir
-            else:
-                # set a new directory
-                stepwd = os.path.join(rundir, step["wd"])
-
-            # try to get the Rosetta executable
-            try:
-                executable = \
-                    client.submit(util.get_rosetta_executable, \
-                                  execname = executable, \
-                                  execpath = execpath, \
-                                  execsuffix = execsuffix)
+                step_wd = run_dir
             
-            # if something went wrong, report it and exit
+            else:
+                
+                # Set a new directory
+                step_wd = os.path.join(run_dir, step["wd"])
+
+            # Try to get the Rosetta executable
+            try:
+                
+                executable = \
+                    client.submit(util.get_rosetta_executable,
+                                  exec_name = executable,
+                                  exec_path = exec_path,
+                                  exec_suffix = exec_suffix)
+            
+            # If something went wrong, report it and exit
             except Exception as e:
+                
                 errstr = f"Could not get Rosetta executable " \
-                         f"'{executable}' from {execpath}."
+                         f"'{executable}' from {exec_path}."
                 log.error(errstr)
                 sys.exit(errstr)
 
-        
-            # if it is a processing step
+            # If it is a processing step
             if role == "processing":
                 
-                # get and update the step options
-                stepopts = client.submit(util.update_options, \
-                                         options = stepopts, \
-                                         pdbfile = currpdbfile) 
+                # Get and update the step options
+                step_opts = client.submit(util.update_options,
+                                          options = step_opts,
+                                          pdb_file = curr_pdb_file)
                 
-                # set the flags file and Rosetta output
-                flagsfile = os.path.join(stepwd, step["flagsfile"])
-                output = os.path.join(stepwd, step["output"])
+                # Set the flags file and Rosetta output
+                flagsfile = os.path.join(step_wd, step["flagsfile"])
+                output = os.path.join(step_wd, step["output"])
                 
-                # write the flagsfile
-                flagsfile = client.submit(util.write_flagsfile, \
-                                          options = stepopts, \
+                # Write the flagsfile
+                flagsfile = client.submit(util.write_flagsfile,
+                                          options = step_opts,
                                           flagsfile = flagsfile)
                 
-                # submit the calculation
+                # Submit the calculation
                 # NB: all processes will be used as MPI processes
                 # if MPI is available, since there is no need for
                 # parallelization over the mutations (it is a
                 # processing step).
                 try:
-                    process = client.submit(util.run_rosetta, \
-                                            executable = executable, \
-                                            flagsfile = flagsfile, \
-                                            output = output, \
-                                            mpinproc = nproc, \
-                                            wd = stepwd, \
-                                            **settings["mpi"])
+                    
+                    process = \
+                        client.submit(\
+                            util.run_rosetta,
+                            executable = executable,
+                            flagsfile = flagsfile,
+                            output = output,
+                            wd = step_wd,
+                            use_mpi = settings["mpi"]["usempi"],
+                            mpi_exec = settings["mpi"]["mpiexec"],
+                            mpi_args = settings["mpi"]["mpiargs"],
+                            mpi_n_proc = n_proc)
                
-                # if something went wrong, report it and exit
+                # If something went wrong, report it and exit
                 except Exception as e:
-                    errstr = f"'{stepname}' run in {stepwd} exited " \
+                    
+                    errstr = f"'{step_name}' run in {step_wd} exited " \
                              f"with code {process['returncode']}. " \
                              f"The following exception occurred: {e}"
                     log.errstr(errstr)
                     sys.exit(errstr)
 
-                # submit also the post-run cleaning
+                # Submit also the post-run cleaning
                 futures.append(\
-                    client.submit(cleaning.clean_folders, \
-                                  process = process, \
-                                  stepname = stepname, \
-                                  wd = stepwd, \
-                                  options = stepopts, \
-                                  level = cleanlevel))
+                    client.submit(cleaning.clean_folders,
+                                  process = process,
+                                  step_name = step_name,
+                                  wd = step_wd,
+                                  options = step_opts,
+                                  level = clean_level))
 
-          
-            # if it is a ΔΔG prediction step
+            # If it is a ΔΔG prediction step
             elif role == "ddg":
 
-                # write out the file mapping the directory
+                # Write out the file mapping the directory
                 # names to the mutations
                 futures.append(\
                     client.submit(\
-                        util.write_mutinfofile, \
-                        mutations = mutations, \
-                        outdir = stepwd, \
-                        mutinfofile = mutoptions["mutinfofile"]))
+                        util.write_mutinfo_file,
+                        mutations_original = mutations_original,
+                        out_dir = step_wd,
+                        mutinfo_file = mut_options["mutinfofile"]))
 
-                # log the order in which the mutations 
-                # will be performed
-                _mutlist = [m[MUTDIRNAME] for m in mutations]
-                mutlist = [m for m in list(dict.fromkeys(_mutlist))]
+                # Log the order in which the mutations will be
+                # performed
+                _mut_list = \
+                    [m[MUT_DIR_NAME] for m in mutations_original]
+                mut_list = \
+                    [m for m in list(dict.fromkeys(_mut_list))]
                 logstr = f"The following mutations will be " \
-                         f"performed:\n{', '.join(mutlist)}."
+                         f"performed:\n{', '.join(mut_list)}."
                 log.info(logstr)
 
-                # for each mutation
-                for mut in mutations:
+                # For each mutation
+                for mut, mut_orig in zip(mutations, mutations_original):
 
+                    # Set the path to the mutation directory
+                    mut_wd = \
+                        os.path.join(step_wd, mut_orig[MUT_DIR_PATH])              
                     
-                    # set the path to the mutation directory
-                    mutwd = os.path.join(stepwd, mut[MUTDIRPATH])              
-                    
-                    # set the flags file and Rosetta output
-                    flagsfile = os.path.join(mutwd, step["flagsfile"])
-                    output = os.path.join(mutwd, step["output"])          
+                    # Set the flags file and Rosetta output
+                    flagsfile = os.path.join(mut_wd, step["flagsfile"])
+                    output = os.path.join(mut_wd, step["output"])          
 
-                    
-                    # if the step is cartesian ΔΔG calculation
-                    if stepname == "cartesian":
+                    # If the step is cartesian ΔΔG calculation
+                    if step_name == "cartesian":
                         
-                        # get the keyword used to specify the mutfile
+                        # Get the keyword used to specify the mutfile
                         # in the configuration file
-                        mutfilekey = \
-                            client.submit(util.get_option_key, \
-                                          options = stepopts, \
+                        mutfile_key = \
+                            client.submit(util.get_option_key,
+                                          options = step_opts,
                                           option = "mutfile").result()
                         
-                        # set the path to the mutfile that will be written
-                        mutfile = os.path.join(mutwd, stepopts[mutfilekey])
+                        # Set the path to the mutfile that will be
+                        # written
+                        mutfile = \
+                            os.path.join(mut_wd, step_opts[mutfile_key])
                         
-                        # write the mutfile
-                        client.submit(util.write_mutfile, \
-                                      mut = mut, \
+                        # Write the mutfile
+                        client.submit(util.write_mutfile,
+                                      mut = mut,
                                       mutfile = mutfile).result()
 
-                        # update the options for the current mutation
-                        # (add input PDB file and mutation-specific options)
-                        optsmut = client.submit(util.update_options, \
-                                                options = stepopts, \
-                                                pdbfile = currpdbfile)
+                        # Update the options for the current mutation
+                        # (add input PDB file and mutation-specific
+                        # options)
+                        opts_mut = \
+                            client.submit(util.update_options,
+                                          options = step_opts,
+                                          pdb_file = curr_pdb_file)
 
-
-                    # if the step is Flex ddG ΔΔG calculation
-                    elif stepname == "flexddg":
+                    # If the step is Flex ddG ΔΔG calculation
+                    elif step_name == "flexddg":
                         
-                        # get the keyword used to specify the Rosetta
+                        # Get the keyword used to specify the Rosetta
                         # script variables in the configuration file
-                        scriptvarskey = \
-                            client.submit(util.get_option_key, \
-                                          options = stepopts, \
-                                          option = "scriptvars").result()
+                        script_vars_key = \
+                            client.submit(\
+                                util.get_option_key,
+                                options = step_opts,
+                                option = "script_vars").result()
                         
-                        # get the keyword used to specify the resfile
+                        # Get the keyword used to specify the resfile
                         # in the configuration file
-                        resfilekey = \
-                            client.submit(util.get_option_key, \
-                                          options = stepopts[scriptvarskey], \
-                                          option = "resfile").result()
+                        resfile_key = \
+                            client.submit(\
+                                util.get_option_key,
+                                options = step_opts[script_vars_key],
+                                option = "resfile").result()
                         
-                        # set the path to the resfile that will be written
+                        # Set the path to the resfile that will be
+                        # written
                         resfile = \
-                            os.path.join(mutwd, \
-                                         stepopts[scriptvarskey][resfilekey])
+                            os.path.join(\
+                                mut_wd,
+                                step_opts[script_vars_key][resfile_key])
                         
-                        # write the resfile
-                        client.submit(util.write_resfile, \
-                                      mut = mut, \
+                        # Write the resfile
+                        client.submit(util.write_resfile,
+                                      mut = mut,
                                       resfile = resfile).result()
 
-                        # update the options for the current mutation
-                        # (add input PDB file and mutation-specific options)
-                        optsmut = client.submit(util.update_options, \
-                                                options = stepopts, \
-                                                pdbfile = currpdbfile, \
-                                                mut = mut)                                
+                        # Update the options for the current mutation
+                        # (add input PDB file and mutation-specific
+                        # options)
+                        opts_mut = \
+                            client.submit(util.update_options,
+                                          options = step_opts,
+                                          pdb_file = curr_pdb_file,
+                                          mut = mut)                                
 
-                    
-                    # write the flagsfile
-                    flagsfile = client.submit(util.write_flagsfile, \
-                                              options = optsmut, \
+                    # Write the flagsfile
+                    flagsfile = client.submit(util.write_flagsfile,
+                                              options = opts_mut,
                                               flagsfile = flagsfile)
 
-
-                    # submit the calculation
+                    # Submit the calculation
                     # NB: only one MPI process will be used if MPI is
                     # available since there is no gain in using MPI
                     # with cartesian_ddg or the Flex ddG procedure.
                     # The parallelization is done over the mutations.
                     try:
-                        process = client.submit(util.run_rosetta, \
-                                                executable = executable, \
-                                                flagsfile = flagsfile, \
-                                                output = output, \
-                                                mpinproc = 1, \
-                                                wd = mutwd, \
-                                                **settings["mpi"])
+                        
+                        process = \
+                            client.submit(\
+                                util.run_rosetta,
+                                executable = executable,
+                                flagsfile = flagsfile,
+                                output = output,
+                                wd = mut_wd,
+                                use_mpi = settings["mpi"]["usempi"],
+                                mpi_exec = settings["mpi"]["mpiexec"],
+                                mpi_args = settings["mpi"]["mpiargs"],
+                                mpi_n_proc = 1)
                     
-                    # if something went wrong, report it and exit
+                    # If something went wrong, report it and exit
                     except Exception as e:
-                        errstr = f"'{stepname}' run in {stepwd} exited " \
-                                 f"with code {process['returncode']}. " \
-                                 f"The following exception occurred: {e}"
-                        # log the error and exit
+                        
+                        errstr = \
+                            f"'{step_name}' run in {step_wd} exited " \
+                            f"with code {process['returncode']}. " \
+                            f"The following exception occurred: {e}"
+                        
+                        # Log the error and exit
                         log.errstr(errstr)
                         sys.exit(errstr)
 
-                    # submit also the post-run cleaning
+                    # Submit also the post-run cleaning
                     futures.append(\
-                        client.submit(cleaning.clean_folders, \
-                                      process = process, \
-                                      stepname = stepname, \
-                                      wd = mutwd, \
-                                      options = optsmut, \
-                                      level = cleanlevel))
+                        client.submit(cleaning.clean_folders,
+                                      process = process,
+                                      step_name = step_name,
+                                      wd = mut_wd,
+                                      options = opts_mut,
+                                      level = clean_level))
 
-      
-        # if the step is run by Python
-        elif stepfeatures["runby"] == "python":
+        # If the step is run by Python
+        elif step_features["run_by"] == "python":
 
-            # if the step is structure selection
-            if stepname == "structure_selection":
+            # If the step is structure selection
+            if step_name == "structure_selection":
 
-                # get the input file, the file type and the
+                # Get the input file, the file type and the
                 # selection criterion
-                infile, infiletype, select = \
-                    stepopts["infile"], stepopts["infiletype"], \
-                    stepopts["select"]
+                in_file, in_file_type, select = \
+                    step_opts["infile"], step_opts["infiletype"], \
+                    step_opts["select"]
 
-                # get the path to the input file (assuming the
+                # Get the path to the input file (assuming the
                 # input file is specified as either a file name
                 # or a relative path starting from the working
                 # directory)
-                infile = os.path.join(rundir, infile)
+                in_file = os.path.join(run_dir, in_file)
                 
-                # try to select the structure
+                # Try to select the structure
                 try:
-                    # run the selection
+                    
+                    # Run the selection
                     struct = \
-                        client.submit(pythonsteps.select_structure, \
-                                      infile = infile, \
-                                      infiletype = infiletype, \
+                        client.submit(pythonsteps.select_structure,
+                                      in_file = in_file,
+                                      in_file_type = in_file_type,
                                       select = select)
                 
-                # if something went wrong, report it and exit
+                # If something went wrong, report it and exit
                 except Exception as e:
+                    
                     errstr = f"Could not not perform the " \
                              f"structure selection: {e}"
                     log.error(errstr)
                     sys.exit(errstr)
                 
-                # get the name of the current PDB file
-                pdbfile = os.path.basename(currpdbfile)
+                # Get the name of the current PDB file
+                pdb_file = os.path.basename(curr_pdb_file)
 
-                # try to get the name of the selected PDB file by
+                # Try to get the name of the selected PDB file by
                 # using the options from the previous (Rosetta) step
                 # to retrieve the correct PDB file
                 try:
-                    currpdbfilename = \
-                        client.submit(util.get_outpdbname, \
-                                      options = prevopts, \
-                                      pdbfile = pdbfile, 
+                    
+                    curr_pdb_file_name = \
+                        client.submit(util.get_out_pdb_name,
+                                      options = prev_opts,
+                                      pdb_file = pdb_file, 
                                       struct = struct).result()
-                # if something went wrong, report the error and exit
+                
+                # If something went wrong, report the error and exit
                 except Exception as e:
+                    
                     errstr = f"Could not get the name of the PDB " \
                              f"of the selected structure: {e}"
                     log.error(errstr)
                     sys.exit(errstr)
 
-                # get the path to the PDB file
-                currpdbfile = os.path.join(prevwd, currpdbfilename)
+                # Get the path to the PDB file
+                curr_pdb_file = \
+                    os.path.join(prev_wd, curr_pdb_file_name)
 
+        # Store the previous step options
+        prev_opts = step_opts
 
-        # store the previous step options
-        prevopts = stepopts
+        # Store the previous step working directory
+        prev_wd = step_wd
 
-        # store the previous step working directory
-        prevwd = stepwd
-  
-
-    # gather the futures pending after running all steps
+    # Gather the futures pending after running all steps
     client.gather(futures)
 
 

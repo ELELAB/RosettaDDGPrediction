@@ -5,7 +5,7 @@
 #
 #    Protocol steps performed by Python.
 #
-#    Copyright (C) 2020 Valentina Sora 
+#    Copyright (C) 2022 Valentina Sora 
 #                       <sora.valentina1@gmail.com>
 #                       Matteo Tiberti 
 #                       <matteo.tiberti@gmail.com> 
@@ -28,7 +28,7 @@
 
 
 
-# standard library
+# Standard library
 import bisect
 import random
 import statistics
@@ -36,92 +36,109 @@ import statistics
 from . import util
 
 
-def select_structure(select, \
-                     infile, \
-                     infiletype):
+
+def select_structure(select,
+                     in_file,
+                     in_file_type):
     """Select a structure (= return its path) based on data stored
     in different Rosetta output files. The structres themselves are
     assumed to live in the same directory as the output file to be
     parsed.
     """
 
+
     #-------------------------- File parsing -------------------------#
 
     
-    # if getting data about the structure from a scorefile in text
+    # If data about the structure are taken from a scorefile in text
     # format
-    if infiletype == "scorefile_text":
-        # open and parse the file
-        data = util.parse_scorefile_text(scorefile = infile)
+    if in_file_type == "scorefile_text":
+        
+        # Open and parse the file
+        data = util.parse_scorefile_text(scorefile = in_file)
+    
     else:
-        # no parsing for other file types has been implemented so far
-        raise NotImplementedError
+        # No parsing for other file types has been implemented so far
+        errstr = \
+            f"You requested the parsing of a file of type " \
+            f"'{in_file_type}' in order to select the relaxed " \
+            f"structure, but only parsing of scorefiles in text " \
+            f"format has been implemented so far."
+        raise NotImplementedError(errstr)
 
     
     #---------------------- Structure selection ----------------------#
 
     
-    # select a random structure
+    # Select a random structure
     if select == "random":
-        struct, sdata = random.choice(data)
+        struct, s_data = random.choice(data)
     
-    # select the first structure
+    # Select the first structure
     elif select == "first":
-        struct, sdata = data[0]
+        struct, s_data = data[0]
     
-    # select the last structure
+    # Select the last structure
     elif select == "last":
-        struct, sdata = data[-1]
+        struct, s_data = data[-1]
     
-    # select the structure with the lowest associated value
+    # Select the structure with the lowest associated value
     elif select == "lowest":
-        struct, sdata = \
+        struct, s_data = \
             sorted(data, key = lambda x: x[1], reverse = False)[0]
     
-    # select the structure with the highest associated value    
+    # Select the structure with the highest associated value    
     elif select == "highest":
-        struct, sdata = \
+        struct, s_data = \
             sorted(data, key = lambda x: x[1], reverse = True)[0]
     
-    # select the structure whose value is closest to the mean value
+    # Select the structure whose value is closest to the mean value
     elif select == "closest_to_mean":
-        # sort the data in ascending order
-        sorteddata = \
-            sorted(data, key = lambda x: x[1], reverse = False)
-        structs, ssdata = zip(*sorteddata)
-        # compute the mean
-        avg = statistics.mean(ssdata)
-        # get where the mean would be in the sorted list of data
-        posavg = bisect.bisect_right(ssdata, avg)
-        # assess if the value closest to the mean is the one on
+        
+        # Sort the data in ascending order
+        sorted_data = \
+            sorted(data, key = lambda x: x[1], reverse = False) 
+        structs, ss_data = zip(*sorted_data)
+        
+        # Compute the mean
+        avg = statistics.mean(ss_data)
+        
+        # Get where the mean would be in the sorted list of data
+        pos_avg = bisect.bisect_right(ss_data, avg)
+        
+        # Assess if the value closest to the mean is the one on
         # the left or on the right of where the mean would be in
         # the sorted list of data
-        lowercloser = \
-             abs(ssdata[posavg-1]-avg) < abs(ssdata[posavg+1]-avg)
-        posclosest = posavg-1 if lowercloser else posavg+1
-        struct, sdata = structs[posclosest], ssdata[posclosest]
+        lower_closer = \
+             abs(ss_data[pos_avg-1]-avg) < abs(ss_data[pos_avg+1]-avg)
+        pos_closest = pos_avg-1 if lower_closer else pos_avg+1
+        struct, s_data = structs[pos_closest], ss_data[pos_closest]
     
-    # get the structure with median value
+    # Get the structure with median value
     elif select == "median":
-        # sort the data in ascending order
-        sorteddata = \
+        
+        # Sort the data in ascending order
+        sorted_data = \
             sorted(data, key = lambda x: x[1], reverse = False)
-        structs, ssdata = zip(*sorteddata)
-        # compute the median
-        median = statistics.median(ssdata)
-        # get where the median would be in the sorted list of data
-        posmedian = bisect.bisect_right(ssdata, median)
-        # the structure with value equal to the median is the one
+        structs, ss_data = zip(*sorted_data)
+        
+        # Compute the median
+        median = statistics.median(ss_data)
+        
+        # Get where the median would be in the sorted list of data
+        pos_median = bisect.bisect_right(ss_data, median)
+        
+        # The structure with value equal to the median is the one
         # immediately preceding where the median would be in the
         # list of sorted data (if two values are equal, bisect
         # right returns an insertion point that is after any
         # existing instance of the value in the list)
-        posclosest = posmedian-1
-        struct, sdata = structs[posclosest], ssdata[posclosest]
+        pos_closest = pos_median-1
+        struct, s_data = structs[pos_closest], ss_data[pos_closest]
     
-    # raise an error if an unrecognized rule was provided
+    # Raise an error if an unrecognized rule was provided
     else:
         raise ValueError(f"No rule with name {select} exists.")
     
-    # return the structure
+    # Return the structure
     return struct

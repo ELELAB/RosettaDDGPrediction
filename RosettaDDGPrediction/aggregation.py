@@ -5,7 +5,7 @@
 #
 #    Utility functions for data aggregation.
 #
-#    Copyright (C) 2020 Valentina Sora 
+#    Copyright (C) 2022 Valentina Sora 
 #                       <sora.valentina1@gmail.com>
 #                       Matteo Tiberti 
 #                       <matteo.tiberti@gmail.com> 
@@ -28,343 +28,393 @@
 
 
 
-# standard library
+# Standard library
 import os.path
 import sqlite3
-# third-party packages
+# Third-party packages
 import pandas as pd
 # RosettaDDGProtocols
-from .defaults import ROSETTADFCOLS
+from .defaults import ROSETTA_DF_COLS
 
 
 
-def parse_output_cartddg(ddgout, \
-                         listcontributions, \
-                         scfname):
-    """Parse the output file from cartddg protocols."""
+def parse_output_cartddg(ddg_out,
+                         list_contributions,
+                         scf_name):
+    """Parse the output file from cartddg protocols and
+    return a data frame.
+    """
 
-    # get the column names
-    scfnamecol = ROSETTADFCOLS["scfname"]
-    statecol = ROSETTADFCOLS["state"]
-    structnumcol = ROSETTADFCOLS["structnum"]
-    totscorecol = ROSETTADFCOLS["totscore"]
+    # Get the column names
+    scf_name_col = ROSETTA_DF_COLS["scf_name"]
+    state_col = ROSETTA_DF_COLS["state"]
+    struct_num_col = ROSETTA_DF_COLS["struct_num"]
+    tot_score_col = ROSETTA_DF_COLS["tot_score"]
     
-    # state names  
+    # State names  
     wt = "wt"
     mut = "mut"
 
-    with open(ddgout, "r") as f:
-        # create empty lists to store the wild-type and mutants ΔGs
-        wtdgs = []
-        mutdgs = []
-        # for each line
+    with open(ddg_out, "r") as f:
+        
+        # Create empty lists to store the wild-type and mutants ΔGs
+        wt_dgs = []
+        mut_dgs = []
+        
+        # For each line
         for line in f:
+            
+            # If the line contains useful information
             if line.startswith("COMPLEX:"):
-                # split the line and remove empty elements
+                
+                # Split the line and remove empty elements
                 line = \
                     [item for item in line.strip("\n").split(" ") \
                      if item != ""]
+                
                 # WT or MUT
-                mutstatus = line[2]
-                # total ΔG
+                mut_status = line[2]
+                
+                # Total ΔG
                 dg = float(line[3])
-                # energy contributions
+                
+                # Energy contributions
                 contributions = [float(item) for item in line[5::2]]
-                # store the data in a dictionary
-                dgdata = dict(zip(listcontributions, contributions))
-                # update the dictionary with the total score
-                dgdata.update({totscorecol : dg})
-                # append it to the right list according to it
+                
+                # Store the data in a dictionary
+                dg_data = dict(zip(list_contributions, contributions))
+                
+                # Update the dictionary with the total score
+                dg_data.update({tot_score_col : dg})
+                
+                # Append it to the right list according to it
                 # referring to a wild-type or to a mutant structure    
-                if mutstatus.startswith("WT"):
-                    wtdgs.append(dgdata)
-                elif mutstatus.startswith("MUT"):
-                    mutdgs.append(dgdata)
+                if mut_status.startswith("WT"):
+                    wt_dgs.append(dg_data)
+                elif mut_status.startswith("MUT"):
+                    mut_dgs.append(dg_data)
         
-        # the protocol must have run the same number
+        # The protocol must have run the same number
         # of rounds for both WT and MUT
-        if len(wtdgs) != len(mutdgs):
+        if len(wt_dgs) != len(mut_dgs):
             errstr = \
                 f"The number of rounds run for the wild-type " \
                 f"structure must be equal to those run for the " \
-                f"mutant, while the file you provided ({ddgoutfile}) " \
-                f"contains {len(wtdgs)} rounds for the wild-type " \
-                f"and {len(mutdgs)} for the mutant. " \
+                f"mutant, while the file you provided ({ddg_out}) " \
+                f"contains {len(wt_dgs)} rounds for the wild-type " \
+                f"and {len(mut_dgs)} for the mutant. " \
                 f"Please check your run."
             raise ValueError(errstr)
         
-        # get the number of structures generated
-        nstructs = [str(i) for i in range(1, len(wtdgs)+1)]
+        # Get the number of structures generated
+        n_structs = [str(i) for i in range(1, len(wt_dgs)+1)]
         
-        # scores for wild-type structures
-        dfwt = pd.DataFrame(wtdgs)
-        dfwt[statecol] = wt
-        dfwt[structnumcol] = nstructs
-        dfwt[scfnamecol] = scfname
+        # Scores for wild-type structures
+        df_wt = pd.DataFrame(wt_dgs)
+        df_wt[state_col] = wt
+        df_wt[struct_num_col] = n_structs
+        df_wt[scf_name_col] = scf_name
         
-        # scores for mutant structures
-        dfmut = pd.DataFrame(mutdgs)
-        dfmut[statecol] = mut
-        dfmut[structnumcol] = nstructs
-        dfmut[scfnamecol] = scfname
+        # Scores for mutant structures
+        df_mut = pd.DataFrame(mut_dgs)
+        df_mut[state_col] = mut
+        df_mut[struct_num_col] = n_structs
+        df_mut[scf_name_col] = scf_name
         
-        # concatenate the results
-        return pd.concat([dfwt, dfmut]).reset_index(drop = True)
+        # Concatenate the results in a data frame
+        return pd.concat([df_wt, df_mut]).reset_index(drop = True)
 
 
-def aggregate_data_cartddg(df, \
-                           listcontributions):
-    """Aggregate data for cartddg protocols."""
+def aggregate_data_cartddg(df,
+                           list_contributions):
+    """Aggregate data for cartddg protocols.
+    """
 
-    # get the column names
-    statecol = ROSETTADFCOLS["state"]
-    structnumcol = ROSETTADFCOLS["structnum"]
-    totscorecol = ROSETTADFCOLS["totscore"]
-    mutationcol = ROSETTADFCOLS["mutation"]
+    # Get the column names
+    state_col = ROSETTA_DF_COLS["state"]
+    struct_num_col = ROSETTA_DF_COLS["struct_num"]
+    tot_score_col = ROSETTA_DF_COLS["tot_score"]
+    mutation_col = ROSETTA_DF_COLS["mutation"]
 
-    # columns storing energy scores
-    scorecols = listcontributions + [totscorecol]
+    # Columns storing energy scores
+    score_cols = list_contributions + [tot_score_col]
 
-    # create a dataframe with the wild-type ΔG scores
-    dgwt = df.loc[df[statecol] == "wt"].reset_index(drop = True)
+    # Create a data frame with the wild-type ΔG scores
+    dg_wt = df.loc[df[state_col] == "wt"].reset_index(drop = True)
 
-    # create a dataframe with the mutant ΔG scores
-    dgmut = df.loc[df[statecol] == "mut"].reset_index(drop = True)
+    # Create a data frame with the mutant ΔG scores
+    dg_mut = df.loc[df[state_col] == "mut"].reset_index(drop = True)
 
-    # create a dataframe with the ΔΔG scores
-    ddg = dgmut.copy()
-    ddg[scorecols] = dgmut[scorecols] - dgwt[scorecols]
-    ddg[statecol] = "ddg"
+    # Create a data frame with the ΔΔG scores
+    ddg = dg_mut.copy()
+    ddg[score_cols] = dg_mut[score_cols] - dg_wt[score_cols]
+    ddg[state_col] = "ddg"
 
-    # return all dataframes
-    return (dgwt, dgmut, ddg)
+    # Return all dataframes
+    return (dg_wt, dg_mut, ddg)
 
 
-def parse_output_flexddg(db3out, \
-                         trajstride, \
-                         structnum, \
-                         scfname):
-    """Parse the .db3 output from flexddg protocols."""
+def parse_output_flexddg(db3_out,
+                         traj_stride,
+                         struct_num,
+                         scf_name):
+    """Parse the .db3 output from flexddg protocols
+    and return a data frame.
+    """
 
-    # get the column names
-    structidcol = ROSETTADFCOLS["structid"]
-    namecol = ROSETTADFCOLS["name"]
-    statecol = ROSETTADFCOLS["state"]
-    scfnamecol = ROSETTADFCOLS["scfname"]
-    bstepscol = ROSETTADFCOLS["bsteps"]
-    sctypecol = ROSETTADFCOLS["sctype"]
-    scvaluecol = ROSETTADFCOLS["scvalue"]
-    structnumcol = ROSETTADFCOLS["structnum"]
+    # Get the column names
+    struct_id_col = ROSETTA_DF_COLS["struct_id"]
+    name_col = ROSETTA_DF_COLS["name"]
+    state_col = ROSETTA_DF_COLS["state"]
+    scf_name_col = ROSETTA_DF_COLS["scf_name"]
+    b_steps_col = ROSETTA_DF_COLS["b_steps"]
+    sc_type_col = ROSETTA_DF_COLS["sc_type"]
+    sc_value_col = ROSETTA_DF_COLS["sc_value"]
+    struct_num_col = ROSETTA_DF_COLS["struct_num"]
     
-    # open the connection
-    db3out = os.path.abspath(db3out)
-    connection = sqlite3.connect(db3out)
+    # Open the connection
+    db3_out = os.path.abspath(db3_out)
+    connection = sqlite3.connect(db3_out)
     connection.row_factory = sqlite3.Row
     
-    # create the cursor
+    # Create the cursor
     cursor = connection.cursor()
     
-    # selection string to get the total number of batches
-    selstr = f'SELECT max(batch_id) from batches'
-    nbatches = cursor.execute(selstr).fetchone()[0]
-    # selection string for the structure scores
+    # Selection string to get the total number of batches
+    sel_str = f'SELECT max(batch_id) from batches'
+    n_batches = cursor.execute(sel_str).fetchone()[0]
+    
+    # Selection string for the structure scores
     sel = \
         "batches.name, structure_scores.struct_id," \
         "score_types.score_type_name, structure_scores.score_value," \
         "score_function_method_options.score_function_name"
-    # selection string for the inner join on batches
-    injoinbatches = \
+    
+    # Selection string for the inner join on batches
+    injoin_batches = \
         "batches.batch_id=structure_scores.batch_id"
-    # selection string for the inner join on the scoring function
-    injoinscfun = \
+    
+    # Selection string for the inner join on the scoring function
+    injoin_scfunc = \
         "score_function_method_options.batch_id=batches.batch_id"
-    # selection string for the inner join on the score type
-    injoinsctype = \
+    
+    # Selection string for the inner join on the score type
+    injoin_sctype = \
         "score_types.batch_id=structure_scores.batch_id " \
         "AND score_types.score_type_id=structure_scores.score_type_id"
     
-    # assemble the query string
+    # Assemble the query string
     query = \
         f"SELECT {sel} from structure_scores\n" \
-        f"INNER JOIN batches ON {injoinbatches}\n" \
-        f"INNER JOIN score_function_method_options ON {injoinscfun}\n" \
-        f"INNER JOIN score_types ON {injoinsctype}"
+        f"INNER JOIN batches ON {injoin_batches}\n" \
+        f"INNER JOIN score_function_method_options ON {injoin_scfunc}\n" \
+        f"INNER JOIN score_types ON {injoin_sctype}"
     
-    # try to read the query into a dataframe
+    # Try to read the query into a data frame
     try:
         df = pd.read_sql_query(query, connection)
-    # if something went wrong, raise an error
+    
+    # If something went wrong, raise an error
     except Exception as e:
-        errstr = f"Could not query the .db3 file ({db3out}): {e}"
+        errstr = f"Could not query the .db3 file ({db3_out}): {e}"
         raise IOError(errstr)
     
-    # function to renumber the structure IDs
-    getnewid = lambda x: trajstride * (1 + (int(x - 1) // nbatches))
-    # function to rename the structures
-    getnewname = lambda x: x.replace("_dbreport", "") \
-                 if x.endswith('_dbreport') else x
+    # Function to renumber the structure IDs
+    get_new_id = \
+        lambda x: traj_stride * (1 + (int(x - 1) // n_batches))
     
-    # renumber the structure IDs
-    df[bstepscol] = df[structidcol].apply(getnewid)
-    # rename the structures
-    df[statecol] = df[namecol].apply(getnewname)
+    # Function to rename the structures
+    get_new_name = \
+        lambda x: x.replace("_dbreport", "") \
+        if x.endswith('_dbreport') else x
     
-    # convert the dataframe into a pivot table
-    df = df.pivot_table(index = [statecol, bstepscol, scfnamecol], \
-                        columns = sctypecol, \
-                        values = scvaluecol).reset_index()
+    # Renumber the structure IDs
+    df[b_steps_col] = df[struct_id_col].apply(get_new_id)
     
-    # add a column for the structure number
-    df[structnumcol] = structnum
-    # add the complete score function name to the
+    # Rename the structures
+    df[state_col] = df[name_col].apply(get_new_name)
+    
+    # Convert the dataframe into a pivot table
+    df = \
+        df.pivot_table(index = [state_col, b_steps_col, scf_name_col],
+                       columns = sc_type_col,
+                       values = sc_value_col).reset_index()
+    
+    # Add a column for the structure number
+    df[struct_num_col] = struct_num
+    
+    # Add the complete score function name to the
     # score function name column
-    df[scfnamecol] = scfname
-    # remove unnecessary column names
+    df[scf_name_col] = scf_name
+    
+    # Remove unnecessary column names
     df.columns.names = [None]
     
-    # close the connection
+    # Close the connection
     connection.close()
 
-    # return the dataframe
+    # Return the data frame
     return df
 
 
-def aggregate_data_flexddg(df, \
-                           listcontributions):
-    """Aggregate data for flexddg protocols."""
+def aggregate_data_flexddg(df,
+                           list_contributions):
+    """Aggregate data for flexddg protocols.
+    """
 
-    # get the column names
-    statecol = ROSETTADFCOLS["state"]
-    scfnamecol = ROSETTADFCOLS["scfname"]
-    bstepscol = ROSETTADFCOLS["bsteps"]
-    structnumcol = ROSETTADFCOLS["structnum"]
-    nstructcol = ROSETTADFCOLS["nstruct"]
-    totscorecol = ROSETTADFCOLS["totscore"]
+    # Get the column names
+    state_col = ROSETTA_DF_COLS["state"]
+    scf_name_col = ROSETTA_DF_COLS["scf_name"]
+    b_steps_col = ROSETTA_DF_COLS["b_steps"]
+    struct_num_col = ROSETTA_DF_COLS["struct_num"]
+    n_struct_col = ROSETTA_DF_COLS["n_struct"]
+    tot_score_col = ROSETTA_DF_COLS["tot_score"]
 
-    # get the score function name
-    scfname = df[scfnamecol].unique()[0]
+    # Get the score function name
+    scf_name = df[scf_name_col].unique()[0]
     
-    # columns storing energy scores
-    scorecols = listcontributions + [totscorecol]
+    # Columns storing energy scores
+    score_cols = list_contributions + [tot_score_col]
     
-    # select only the rows corresponding to the maximum number
+    # Select only the rows corresponding to the maximum number
     # of backrub steps performed
-    bstepscond = (df[bstepscol] == df[bstepscol].max())
+    b_steps_cond = (df[b_steps_col] == df[b_steps_col].max())
     
-    # generate selections on binding and mutation states
-    ubwt = df.loc[(df[statecol] == "unbound_wt") & bstepscond]
-    ubmut = df.loc[(df[statecol] == "unbound_mut") & bstepscond]
-    bwt = df.loc[(df[statecol] == "bound_wt") & bstepscond]
-    bmut = df.loc[(df[statecol] == "bound_mut") & bstepscond]
+    # Generate selections on binding and mutation states
+    ub_wt = df.loc[(df[state_col] == "unbound_wt") & b_steps_cond]
+    ub_mut = df.loc[(df[state_col] == "unbound_mut") & b_steps_cond]
+    b_wt = df.loc[(df[state_col] == "bound_wt") & b_steps_cond]
+    b_mut = df.loc[(df[state_col] == "bound_mut") & b_steps_cond]
     
-    # get the scores (reset index to make it uniform to be able
+    # Get the scores (reset the index to make it uniform to be able
     # to perform the subtraction between mutant ΔGs and
     # wild-type ΔGs later)
-    ubwtscores = ubwt[scorecols].reset_index(drop = True)
-    ubmutscores = ubmut[scorecols].reset_index(drop = True)
-    bwtscores = bwt[scorecols].reset_index(drop = True)
-    bmutscores = bmut[scorecols].reset_index(drop = True)
+    ub_wt_scores = ub_wt[score_cols].reset_index(drop = True)
+    ub_mut_scores = ub_mut[score_cols].reset_index(drop = True)
+    b_wt_scores = b_wt[score_cols].reset_index(drop = True)
+    b_mut_scores = b_mut[score_cols].reset_index(drop = True)
     
-    # get the list of structures from one of the dataframes
-    structnums = list(ubwt[structnumcol])
+    # Get the list of structures from one of the data frames
+    struct_nums = list(ub_wt[struct_num_col])
     
-    # create a dataframe with the wild-type ΔG scores
-    dgwt = bwtscores - ubwtscores
+    # Create a data frame with the wild-type ΔG scores
+    dg_wt = b_wt_scores - ub_wt_scores
     
-    # create a dataframe with the mutant ΔG scores
-    dgmut = bmutscores - ubmutscores
+    # Create a data frame with the mutant ΔG scores
+    dg_mut = b_mut_scores - ub_mut_scores
     
-    # create a copy of the dataframe containing the mutant ΔG scores
-    ddg = dgmut.copy()
-    # subtract the wild-type ΔG scores from the mutant ΔG scores
+    # Create a copy of the dataframe containing the mutant ΔG scores
+    ddg = dg_mut.copy()
+    
+    # Subtract the wild-type ΔG scores from the mutant ΔG scores
     # to obtain the ΔΔG scores
-    ddg[scorecols] = dgmut[scorecols] - dgwt[scorecols]
+    ddg[score_cols] = dg_mut[score_cols] - dg_wt[score_cols]
     
-    # add a column to all dataframes with the state
-    dgwt[statecol], dgmut[statecol], ddg[statecol] = "wt", "mut", "ddg"
-    # add a column to all dataframes with the score function name
-    dgwt[scfnamecol], dgmut[scfnamecol], ddg[scfnamecol] = \
-        scfname, scfname, scfname
-    # add a column to all dataframes with the structure numbers
-    dgwt[structnumcol], dgmut[structnumcol], ddg[structnumcol] = \
-        structnums, structnums, structnums
-
-    # return the dataframes
-    return (dgwt, dgmut, ddg)
-
-
-def generate_output_dataframes(dgwt, \
-                               dgmut, \
-                               ddg, \
-                               mutation, \
-                               mutlabel, \
-                               poslabel, \
-                               rescale, \
-                               listcontributions, \
-                               convfact):
+    # Add a column to all data frames with the state
+    dg_wt[statecol], dgmut[statecol], ddg[statecol] = "wt", "mut", "ddg"
     
-    # get the columns names
-    mutationcol = ROSETTADFCOLS["mutation"]
-    mutlabelcol = ROSETTADFCOLS["mutlabel"]
-    poslabelcol = ROSETTADFCOLS["poslabel"]
-    statecol = ROSETTADFCOLS["state"]
-    totscorecol = ROSETTADFCOLS["totscore"]
-    energyunitcol = ROSETTADFCOLS["energyunit"]
-    structnumcol = ROSETTADFCOLS["structnum"]
-    scfnamecol = ROSETTADFCOLS["scfname"]
+    # Add a column to all data frames with the score function name
+    dg_wt[scf_name_col], dg_mut[scf_name_col], ddg[scf_name_col] = \
+        scf_name, scf_name, scf_name
+    
+    # Add a column to all data frames with the structure numbers
+    dg_wt[struct_num_col], dg_mut[struct_num_col], ddg[struct_num_col] = \
+        struct_nums, struct_nums, struct_nums
 
-    # columns storing energy scores
-    scorecols = [totscorecol] + listcontributions
+    # Return the data frames
+    return (dg_wt, dg_mut, ddg)
 
-    # columns of the structures dataframe
-    structdfcols = [mutationcol, mutlabelcol, poslabelcol,  \
-                    structnumcol, statecol, energyunitcol, \
-                    scfnamecol, *scorecols]
 
-    # columns of the aggregate dataframe
-    aggrdfcols = [mutationcol, mutlabelcol, poslabelcol, \
-                  statecol, energyunitcol, scfnamecol, \
-                  *scorecols]
+def generate_output_dataframes(dg_wt,
+                               dg_mut,
+                               ddg,
+                               mutation,
+                               mut_label,
+                               pos_label,
+                               rescale,
+                               list_contributions,
+                               conv_fact):
+    
+    # Get the columns names
+    mutation_col = ROSETTA_DF_COLS["mutation"]
+    mut_label_col = ROSETTA_DF_COLS["mut_label"]
+    pos_label_col = ROSETTA_DF_COLS["pos_label"]
+    state_col = ROSETTA_DF_COLS["state"]
+    tot_score_col = ROSETTA_DF_COLS["tot_score"]
+    energy_unit_col = ROSETTA_DF_COLS["energy_unit"]
+    struct_num_col = ROSETTA_DF_COLS["struct_num"]
+    scf_name_col = ROSETTA_DF_COLS["scf_name"]
+
+    # Columns storing energy scores
+    score_cols = [tot_score_col] + list_contributions
+
+    # Columns of the structures dataframe
+    struct_df_cols = \
+        [mutation_col, mut_label_col, pos_label_col,
+         struct_num_col, state_col, energy_unit_col,
+         scf_name_col, *score_cols]
+
+    # Columns of the aggregate dataframe
+    aggr_df_cols = \
+        [mutation_col, mut_label_col, pos_label_col, state_col,
+         energy_unit_col, scf_name_col, *score_cols]
+
 
     #------------------------ Structures data ------------------------#
 
-    # concatenate the three dataframes
-    structdf = pd.concat([dgwt, dgmut, ddg])
-    # add the columns with the mutation name and the mutation labels
-    structdf.insert(0, mutationcol, mutation)
-    structdf.insert(1, mutlabelcol, mutlabel)
-    structdf.insert(2, poslabelcol, poslabel)
+
+    # Concatenate the three dataframes
+    struct_df = pd.concat([dg_wt, dg_mut, ddg])
+
+    # Add the columns with the mutation name and the mutation labels
+    struct_df.insert(0, mutation_col, mutation)
+    struct_df.insert(1, mut_label_col, mut_label)
+    struct_df.insert(2, pos_label_col, pos_label)
+
 
     #------------------------- Aggregate data ------------------------#
 
-    # group
-    groupby = [mutationcol, mutlabelcol, poslabelcol, \
-               statecol, scfnamecol]
-    aggrdf = structdf.groupby(groupby).mean().reset_index()
+
+    # Get the column you want to group by
+    group_by = \
+        [mutation_col, mut_label_col, pos_label_col,
+         state_col, scf_name_col]
+
+    # Group
+    aggr_df = struct_df.groupby(group_by).mean().reset_index()
+
 
     #----------------------------- Rescale ---------------------------#
 
-    # default energy units are Rosetta Energy Units
-    energyunit = "REUs"
-    # if rescaling has been requested
+
+    # Default energy units are Rosetta Energy Units
+    energy_unit = "REUs"
+    
+    # If rescaling has been requested
     if rescale:
-        # rescale the ΔΔG scores to kcal/mol
-        aggrdf[scorecols] = aggrdf[scorecols] * 1.0/convfact
-        structdf[scorecols] = structdf[scorecols] * 1.0/convfact
-        # change the energy unit
-        energyunit = "kcal/mol"
+        
+        # Rescale the ΔΔG scores in REUs to kcal/mol
+        aggr_df[score_cols] = aggr_df[score_cols] * 1.0/conv_fact
+        struct_df[score_cols] = struct_df[score_cols] * 1.0/conv_fact
+        
+        # Change the energy unit
+        energy_unit = "kcal/mol"
+
 
     #------------------------ Add units column -----------------------#
 
-    # add the energy units column to both dataframes
-    aggrdf[energyunitcol] = energyunit
-    structdf[energyunitcol] = energyunit
+
+    # Add the energy units column to both dataframes
+    aggr_df[energy_unit_col] = energy_unit
+    struct_df[energy_unit_col] = energy_unit
+
 
     #-------------------------- Sort columns -------------------------#
 
-    # sort columns in both dataframes
-    aggrdf = aggrdf[aggrdfcols]
-    structdf = structdf[structdfcols]
 
-    # return the structures data and the aggregate data
-    return (aggrdf, structdf)
+    # Sort columns in both dataframes
+    aggr_df = aggr_df[aggr_df_cols]
+    struct_df = struct_df[struct_df_cols]
+
+    # Return the structures data and the aggregate data
+    return (aggr_df, struct_df)
