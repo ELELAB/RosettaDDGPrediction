@@ -311,7 +311,7 @@ def aggregate_data_flexddg(df,
     ddg[score_cols] = dg_mut[score_cols] - dg_wt[score_cols]
     
     # Add a column to all data frames with the state
-    dg_wt[statecol], dgmut[statecol], ddg[statecol] = "wt", "mut", "ddg"
+    dg_wt[state_col], dg_mut[state_col], ddg[state_col] = "wt", "mut", "ddg"
     
     # Add a column to all data frames with the score function name
     dg_wt[scf_name_col], dg_mut[scf_name_col], ddg[scf_name_col] = \
