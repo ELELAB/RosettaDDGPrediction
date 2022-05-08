@@ -1248,7 +1248,7 @@ def get_mutinfo(mutinfo_file):
                  MUTINFO_COLS["pos_label"] : pos_label,
                  CHAIN : chain,
                  WTR : wtr,
-                 NUMR: numr,
+                 NUMR: int(numr),
                  MUTR : mutr})
 
         # Create a data frame from the list

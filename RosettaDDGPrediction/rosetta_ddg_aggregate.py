@@ -327,7 +327,7 @@ def main():
         
         mutinfo = client.submit(util.get_mutinfo,
                                 mutinfo_file = mutinfo_file).result()
-    
+
     # If something went wrong, report it and exit
     except Exception as e:
         
@@ -483,9 +483,11 @@ def main():
 
     # Aggregate the dataframes containing single mutations
     mut_aggr_df = client.submit(pd.concat,
-                                mut_aggr_dfs).result()
+                                mut_aggr_dfs,
+                                sort = False).result()
     mut_struct_df = client.submit(pd.concat,
-                                  mut_struct_dfs).result()
+                                  mut_struct_dfs,
+                                  sort = False).result()
     
     # Save the dataframes with data for all the mutations
     mut_aggr_df_path = os.path.join(out_dir, mut_aggr)
