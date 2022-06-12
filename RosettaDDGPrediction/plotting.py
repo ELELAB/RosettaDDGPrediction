@@ -44,6 +44,7 @@ from .defaults import (
     CHAIN,
     CHAIN_SEP,
     COMP_SEP,
+    MULTI_MUT_SEP,
     MUTR,
     NUMR,
     ROSETTA_DF_COLS, 
@@ -76,11 +77,24 @@ def load_aggregated_data(in_file,
     # scan
     if saturation:
         
-        # Create new columns 
-        new_cols = \
-            pd.DataFrame(\
-                df[mutation_col].str.split(COMP_SEP, 3).tolist(),
-                columns = [CHAIN, WTR, NUMR, MUTR])
+        # Try to create new columns containing the chain, the
+        # wild-type residue, the residue number, and the mutated
+        # residue
+        try:
+            new_cols = \
+                pd.DataFrame(\
+                    df[mutation_col].str.split(COMP_SEP, 3).tolist(),
+                    columns = [CHAIN, WTR, NUMR, MUTR])
+
+        # If something goes wrong, remind the user of the
+        # format that the data must have in order to plot data
+        # from saturation mutagenesis scans, and raise an exception
+        except Exception as e:
+            errstr = \
+                "You need to have only single mutations for " \
+                "different positions in order to plot data " \
+                "from a saturation mutagenesis scan."
+            raise Exception(errstr)
         
         # Add the new columns
         df = pd.concat([df, new_cols], axis = 1)
@@ -485,7 +499,8 @@ def plot_total_heatmap(df,
                        config,
                        out_file,
                        out_config,
-                       saturation = False):
+                       saturation = False,
+                       saturation_on = None):
     """Plot either:
 
     - a one-row heatmap where all mutations are displayed on the
@@ -514,12 +529,14 @@ def plot_total_heatmap(df,
     state_col = ROSETTA_DF_COLS["state"] 
     tot_score_col = ROSETTA_DF_COLS["tot_score"]
     
-    # If the data are from a saturation mutagenesis scan
+    # If the data are from a scan which included saturation
+    # mutagenesis
     if saturation:
-        
+
         # Take only the total ΔΔG values
         final_df = df[df[state_col] == "ddg"][[pos_label_col,
-                                               MUTR, tot_score_col]]
+                                               MUTR,
+                                               tot_score_col]]
         
         # Create a data frame where rows are positions (identified
         # by all mutation elements that are not the mutated residue,
@@ -528,7 +545,7 @@ def plot_total_heatmap(df,
         final_df = final_df.pivot(index = pos_label_col,
                                   columns = MUTR,
                                   values = tot_score_col).transpose()
-        
+
         # Y-axis tick labels will be the row names
         y_ticklabels = final_df.index.values.tolist()
         

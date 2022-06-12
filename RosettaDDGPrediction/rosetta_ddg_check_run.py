@@ -167,7 +167,7 @@ def main():
             dirs_paths = dirs_mutations
 
         # If it is a flexddg protocol
-        if family == "flexddg":
+        elif family == "flexddg":
 
             # Get the number of structures generated
             n_struct = config_run["mutations"]["nstruct"]

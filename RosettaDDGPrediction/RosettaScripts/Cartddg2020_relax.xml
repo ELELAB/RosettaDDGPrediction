@@ -1,0 +1,14 @@
+<ROSETTASCRIPTS>
+    <SCOREFXNS>
+        <ScoreFunction name="fullatom" weights="%%scfname%%" symmetric="0">
+        </ScoreFunction>
+	</SCOREFXNS>
+	<MOVERS>
+        <FastRelax name="fastrelax" scorefxn="fullatom" cartesian="1" repeats="%%repeats%%"/> 
+	</MOVERS>
+	<PROTOCOLS>
+        <Add mover="fastrelax"/>
+    </PROTOCOLS>
+    <OUTPUT scorefxn="fullatom"/>
+ 
+</ROSETTASCRIPTS>

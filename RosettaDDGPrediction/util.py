@@ -30,6 +30,7 @@
 
 # Standard library
 import copy
+import itertools
 import logging as log
 import operator
 import os
@@ -854,32 +855,84 @@ def get_res_list(res_list_file):
 
 
 def get_saturation_mut_list(pos_list, res_list):
-    """Generate a mutation list for saturation mutagenesis from
-    a list of residue positions and a list of residue types.
+    """Generate a mutation list for saturation mutagenesis.
+    
+    Every position specified as (chain, wild_type_residue,
+    position) will be treated as a position to perform
+    saturation mutagenesis on, while every mutation specified
+    as (chain, wild_type_residue, position, mutated_residue)
+    will be treated as a single mutation.
+    
+    If you define multiple positions to be simultaneously
+    mutated (i.e., on the same line of the mutations' list file),
+    all possible combinations of mutations of those positions
+    will be performed (Cartesian product).
+    
+    Example
+    -------
+    If in the mutations' list file you have:
+
+    A.R.10,A.R.11,A.F.52.A
+
+    and in the residues' list file you have:
+
+    A
+    C
+
+    The following mutations will be performed:
+
+    A.R.10.A and A.R.11.A and F.52.A
+    A.R.10.A and A.R.11.C and F.52.A
+    A.R.10.C and A.R.11.A and F.52.A
+    A.R.10.C and A.R.11.C and F.52.A
     """
 
-    # Create an empty list to store the saturation mutagenesis
-    # list of mutations
+    # Create an empty list to store the list of mutations
+    # when saturation mutagenesis is involved
     sat_mut_list = []
     
-    # For each residue position
+    # For each combination of mutations/positions
     for pos_data, *extra_data in pos_list:
-        
-        # Check that you have only single positions
-        if len(pos_data) > 1:
-            errstr = \
-                "You cannot have multiple simultaneous " \
-                "mutations in saturation mutagenesis scans."
-            raise ValueError(errstr)
-        
-        # For each position in the list
-        for (chain, wtr, pos) in pos_data:
-            # Add all possible mutations for the current
-            # position to the list
+
+        # If there is only one mutation/postion
+        if len(pos_data) == 1:
+
+            # If it is a mutation (chain, wild-type residue,
+            # position, and mutated residue specified)
+            if len(pos_data[0]) == 4:
+
+                # Just add the mutation to the list (it will
+                # not be part of the saturation mutagenesis)
+                sat_mut_list.append((pos_data, *extra_data))
+            
+            # If it is a position (chain, wild-type residue,
+            # position, and mutated residue specified)
+            elif len(pos_data[0]) == 3:
+                
+                # Get the chain, wild-type residue, and position
+                chain, wtr, numr = pos_data[0]
+
+                # Add all possible mutations for the current
+                # position to the list
+                sat_mut_list.extend(\
+                    [(((chain, wtr, numr, res),), *extra_data) \
+                     for res in res_list])
+
+        # If there are multiple mutations/positions
+        else:
+
+            # For each position, generate all possible mutations.
+            # For each mutation, simply add it.
+            single_muts = \
+                [[(*i, r) if len(i) == 3 else tuple(i) \
+                 for r in res_list] for i in pos_data]
+
+            # Compute the Cartesian product between the different
+            # possibilities to obtain the final list of mutations
             sat_mut_list.extend(\
-                [(((chain, wtr, pos, res),), *extra_data) \
-                 for res in res_list])
-    
+                ([(i, *extra_data) for i in \
+                  list(itertools.product(*single_muts))]))
+
     # Return the list of mutations
     return sat_mut_list
 
@@ -1013,7 +1066,7 @@ def get_mutations(list_file,
 
     # Get the mutations/positions list
     mut_list = get_mut_list(list_file)
-    
+
     # If a list of residue types has been passed, assume it is a
     # saturation mutagenesis scan
     if res_list_file:
@@ -1056,7 +1109,7 @@ def get_mutations(list_file,
         # Initialize an empty list to store the single mutations
         # defined in each mutation
         muts = []
-        
+
         # ((("A","C","151","Y"), ("A","S","154","N")), *extra_data)
         for mut, *extra_data in mutl:
 
@@ -1144,20 +1197,15 @@ def write_mutinfo_file(mutations_original,
 
     with open(mutinfo_file_path, "w") as out:
         
-        # Store the mutations' directory names written
-        # so that you do not write them more than once
-        # (they will be repeated in a list of mutations
-        # performed on multiple structures)
-        dir_names = set()
-        
+        # Keep track of the mutations already written
+        # to the mutinfo file
+        muts_written = set()
+
         # Get the keys of the attributes of the mutation
         keys = (CHAIN, WTR, NUMR, MUTR)
         
         # For each mutation in the original list
         for mut_orig in mutations_original:
-            
-            # Get the directory name
-            dir_name = mut_orig[MUT_DIR_NAME]
 
             # Generate empty lists to store the single
             # mutations (to be joined later) composing each
@@ -1165,50 +1213,52 @@ def write_mutinfo_file(mutations_original,
             mutation_def = []
             mut_label_def = []
             pos_label_def = []
-            
+
+            mut_hash = tuple([tuple(i.items()) for i in mut_orig[MUT]])
+
             # For each single mutation
-            for single_mut_orig in mut_orig[MUT]:
-                
+            for i, single_mut_orig in enumerate(mut_orig[MUT]):
+
                 # Get the attributes of the original mutation
                 chain_orig, wtr_orig, numr_orig, mutr_orig = \
                     operator.itemgetter(*keys)(single_mut_orig)
-                
+
                 # Strip Rosetta identifiers of non canonical
                 # residues from the name of the residues (so
                 # that it is consistent with what it is written
                 # in the mutations' list file)
                 wtr_orig = wtr_orig.strip("X[]")
                 mutr_orig = mutr_orig.strip("X[]")
-                
-                # If the directory has not been created yet
-                if not dir_name in dir_names:
+
+                # Compose the mutation name            
+                mutation_def.append(\
+                    f"{chain_orig}{COMP_SEP}{wtr_orig}{COMP_SEP}" \
+                    f"{numr_orig}{COMP_SEP}{mutr_orig}")
                     
-                    # Compose the mutation name            
-                    mutation_def.append(\
-                        f"{chain_orig}{COMP_SEP}{wtr_orig}{COMP_SEP}" \
-                        f"{numr_orig}{COMP_SEP}{mutr_orig}")
+                # Compose the mutation label (by default
+                # without the chain ID)
+                mut_label_def.append(\
+                    f"{wtr_orig}{numr_orig}{mutr_orig}")
                     
-                    # Compose the mutation label (by default
-                    # without the chain ID)
-                    mut_label_def.append(\
-                        f"{wtr_orig}{numr_orig}{mutr_orig}")
-                    
-                    # Compose the position label (by default
-                    # without the chain ID)
-                    pos_label_def.append(\
-                        f"{wtr_orig}{numr_orig}")
+                # Compose the position label (by default
+                # without the chain ID)
+                pos_label_def.append(\
+                    f"{wtr_orig}{numr_orig}")
                 
-                # Write out the directory name, the mutation
-                # and the label that will be used for the
-                # mutation in the aggregation/plot
-                out.write(f"{MULTI_MUT_SEP.join(mutation_def)},"
-                          f"{dir_name},"
-                          f"{MULTI_MUT_SEP.join(mut_label_def)},"
-                          f"{MULTI_MUT_SEP.join(pos_label_def)}\n")
+                # 
+                if i == len(mut_orig[MUT])-1 \
+                and mut_hash not in muts_written:
                 
-                # Add the directory name to the set of
-                # directory names already used
-                dir_names.add(dir_name)
+                    # Write out the directory name, the mutation
+                    # and the label that will be used for the
+                    # mutation in the aggregation/plot
+                    out.write(f"{MULTI_MUT_SEP.join(mutation_def)},"
+                              f"{mut_orig[MUT_DIR_NAME]},"
+                              f"{DIR_MUT_SEP.join(mut_label_def)},"
+                              f"{DIR_MUT_SEP.join(pos_label_def)}\n")
+
+                    muts_written.add(mut_hash)
+                
 
 
 def get_mutinfo(mutinfo_file):
@@ -1236,35 +1286,16 @@ def get_mutinfo(mutinfo_file):
             mut_name, dir_name, mut_label, pos_label = \
                 l.rstrip("\n").split(",")
             
-            # Get the different attributes of the mutation
-            chain, wtr, numr, mutr = tuple(mut_name.split(COMP_SEP))
-            
-            # Append a dictionary mapping each attribute
-            # name to the attribute itself to the list
+            # Update the dictionary corresponding to
+            # the current mutation
             mutinfo.append(\
                 {MUTINFO_COLS["mut_name"] : mut_name,
                  MUTINFO_COLS["dir_name"] : dir_name,
                  MUTINFO_COLS["mut_label"] : mut_label,
-                 MUTINFO_COLS["pos_label"] : pos_label,
-                 CHAIN : chain,
-                 WTR : wtr,
-                 NUMR: int(numr),
-                 MUTR : mutr})
+                 MUTINFO_COLS["pos_label"] : pos_label})
 
-        # Create a data frame from the list
-        df = pd.DataFrame(mutinfo)
-        
-        # Sort the mutations first by chain ID, then by residue number
-        # and finally alphabetically by wild-type residue
-        df = df.sort_values(by = [CHAIN, NUMR, WTR])
-        
-        # Drop the columns containing chain IDs, residue numbers
-        # and wild-type residues (were kept only for sorting
-        # purposes)
-        df = df.drop([CHAIN, NUMR, WTR], axis = 1)
-        
-        # Return the data frame
-        return df
+        # Create a data frame from the list and return it
+        return pd.DataFrame(mutinfo)
 
 
 

@@ -338,7 +338,7 @@ def main():
 
 
     # For each mutation
-    for i, (mut_name, dir_name, mut_label, pos_label, mutr) \
+    for i, (mut_name, dir_name, mut_label, pos_label) \
         in mutinfo.iterrows():
         
         # Get the mutation directory path

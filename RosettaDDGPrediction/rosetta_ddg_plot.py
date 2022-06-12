@@ -97,8 +97,8 @@ def main():
     out_file = util.get_abspath(args.outfile)
     
     # Configuration files
-    config_file_plot = args.configfile_plot
     config_file_aggr = args.configfile_aggregate
+    config_file_plot = args.configfile_plot
 
 
 
@@ -158,68 +158,156 @@ def main():
     # If the plot is a heatmap of total scores
     if plot_type == "total_heatmap":
         
-        # Load the aggregated data
-        df = plotting.load_aggregated_data(in_file = in_file)
+        # Try to load the aggregated data
+        try:
+            
+            df = plotting.load_aggregated_data(in_file = in_file)
         
-        # Plot the heatmap
-        plotting.plot_total_heatmap(df = df,
-                                    config = config,
-                                    out_file = out_file,
-                                    out_config = out_config)
+        # If something went wrong, report it and exit
+        except Exception as e:
 
+            errstr = \
+                f"Could not load the aggregated data from " \
+                f"{in_file}: {e}"
+            log.error(errstr)
+            sys.exit(errstr)
+
+        # Try to plot the heatmap
+        try:
+
+            plotting.plot_total_heatmap(df = df,
+                                        config = config,
+                                        out_file = out_file,
+                                        out_config = out_config)
+
+        # If something went wrong, report it and exit
+        except Exception as e:
+
+            errstr = f"Could not plot the heatmap : {e}"
+            log.error(errstr)
+            sys.exit(errstr)
 
     # If the plot is a heatmap for a saturation mutagenesis scan
     elif plot_type == "total_heatmap_saturation":
         
-        # Load the aggregated data
-        df = plotting.load_aggregated_data(in_file = in_file,
-                                           saturation = True)
-        
-        # Plot the 2D heatmap
-        plotting.plot_total_heatmap(df = df,
-                                    config = config,
-                                    out_file = out_file,
-                                    out_config = out_config,
-                                    saturation = True)
+        # Try to load the aggregated data
+        try:
 
+            df = plotting.load_aggregated_data(in_file = in_file,
+                                               saturation = True)
+
+        # If something went wrong, report it and exit
+        except Exception as e:
+
+            errstr = \
+                f"Could not load the aggregated data from " \
+                f"{in_file}: {e}"
+            log.error(errstr)
+            sys.exit(errstr)
+
+        # Try to plot the 2D heatmap
+        try:
+
+            plotting.plot_total_heatmap(df = df,
+                                        config = config,
+                                        out_file = out_file,
+                                        out_config = out_config,
+                                        saturation = True)
+
+        # If something went wrong, report it and exit
+        except Exception as e:
+
+            errstr = f"Could not plot the heatmap : {e}"
+            log.error(errstr)
+            sys.exit(errstr)
 
     # If the plot is a barplot dividing the total ΔΔG score
     # into its energy contributions
     elif plot_type == "contributions_barplot":
         
-        # Load the aggregated data
-        df = plotting.load_aggregated_data(in_file = in_file)
-        
-        # Get the scoring function name
-        scf_name = df[ROSETTA_DF_COLS["scf_name"]].unique()[0]
-        
+        # Try to load the aggregated data
+        try:
+
+            df = plotting.load_aggregated_data(in_file = in_file)
+
+        # If something went wrong, report it and exit
+        except Exception as e:
+
+            errstr = \
+                f"Could not load the aggregated data from " \
+                f"{in_file}: {e}"
+            log.error(errstr)
+            sys.exit(errstr)
+
+        # Try to get the scoring function name
+        try:
+            
+            scf_name = df[ROSETTA_DF_COLS["scf_name"]].unique()[0]
+
+        # If something went wrong, report it and exit
+        except Exception as e:
+
+            errstr = \
+                f"Could not retrieve the name of the scoring " \
+                f"function from {in_file}. Make sure there the " \
+                f"column containing the scoring function is " \
+                f"named '{ROSETTA_DF_COLS["scf_name"]}'."
+            log.error(errstr)
+            sys.exit(errstr)
+
         # Get the list of energy cntributions for the scoring
         # function used
         contributions = config_aggr["energy_contributions"][scf_name]
         
-        # Plot the bar plot
-        out_config.pop("format")
-        plotting.plot_contributions_barplot(\
-                                    df = df,
-                                    config = config,
-                                    contributions = contributions,
-                                    out_file = out_file,
-                                    out_config = out_config)
+        # Try to plot the bar plot
+        try:
+            out_config.pop("format")
+            plotting.plot_contributions_barplot(\
+                                        df = df,
+                                        config = config,
+                                        contributions = contributions,
+                                        out_file = out_file,
+                                        out_config = out_config)
 
+        # If something went wrong, report it and exit
+        except Exception as e:
+
+            errstr = f"Could not plot the barplot : {e}"
+            log.error(errstr)
+            sys.exit(errstr)
 
     # If the plot is a swarmplot showing the distributions of
     # total ΔG scores for all wild-type and mutant structures
     elif plot_type == "dg_swarmplot":
         
-        # Load the aggregated data
-        df = plotting.load_aggregated_data(in_file = in_file)
-        
-        # Plot the swarmplot 
-        plotting.plot_dg_swarmplot(df = df,
-                                   config = config,
-                                   out_file = out_file,
-                                   out_config = out_config)
+        # Try to load the aggregated data
+        try:
 
+            df = plotting.load_aggregated_data(in_file = in_file)
+
+        # If something went wrong, report it and exit
+        except Exception as e:
+
+            errstr = \
+                f"Could not load the aggregated data from " \
+                f"{in_file}: {e}"
+            log.error(errstr)
+            sys.exit(errstr)
+                    
+        # Try to plot the swarmplot
+        try:
+            
+            plotting.plot_dg_swarmplot(df = df,
+                                       config = config,
+                                       out_file = out_file,
+                                       out_config = out_config)
+
+        # If something went wrong, report it and exit
+        except Exception as e:
+
+            errstr = f"Could not plot the swarmplot : {e}"
+            log.error(errstr)
+            sys.exit(errstr)
 
     # If an invalid plot type was passed, report it and exit
     else:
