@@ -333,7 +333,8 @@ def generate_output_dataframes(dg_wt,
                                pos_label,
                                rescale,
                                list_contributions,
-                               conv_fact):
+                               conv_fact,
+                               family):
     
     # Get the columns names
     mutation_col = ROSETTA_DF_COLS["mutation"]
@@ -379,9 +380,40 @@ def generate_output_dataframes(dg_wt,
     group_by = \
         [mutation_col, mut_label_col, pos_label_col,
          state_col, scf_name_col]
+    
 
-    # Group
-    aggr_df = struct_df.groupby(group_by).mean().reset_index()
+    # If the protocol is the updated version of the cartddg protocol
+    if family == "cartddg2020":
+
+        # Sort the data frame so that the row corresponding to the
+        # structure pair with the lowest energy score for the
+        # mutant is the first one
+        low_ddg_score_first = \
+            struct_df.loc[struct_df[state_col] == "mut"].sort_values(\
+                by = tot_score_col,
+                axis = 0,
+                ascending = True)
+
+        # Get the number of the structure pair with lowest energy
+        # score for the mutant
+        struct_num_low = \
+            low_ddg_score_first.iloc[0][struct_num_col]
+
+        # The aggregate data frame will only contain data about
+        # the structure pair having the lowest energy score for the
+        # mutant
+        aggr_df = \
+            struct_df.loc[struct_df[struct_num_col] == struct_num_low]
+
+        # Drop the column containing the structure number information
+        aggr_df = aggr_df.drop(struct_num_col, axis = 1)
+
+    # Otherwise
+    elif family in ("cartddg", "flexddg"):
+        
+        # The aggregate data frame will contain data about the
+        # average scores
+        aggr_df = struct_df.groupby(group_by).mean().reset_index()
 
 
     #----------------------------- Rescale ---------------------------#

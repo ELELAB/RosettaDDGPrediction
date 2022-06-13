@@ -49,7 +49,12 @@ ROSETTA_PROTOCOLS = \
         {"relax" : {"role" : "processing",
                     "run_by" : "rosetta",
                     "executable" : "relax"},
-         "relax2020" : {"role" : "processing",
+         "structure_selection" : {"run_by" : "python"},
+         "cartesian" : {"role" : "ddg",
+                        "run_by" : "rosetta",
+                        "executable" : "cartesian_ddg"}},
+    "cartddg2020" : \
+        {"relax2020" : {"role" : "processing",
                         "run_by" : "rosetta",
                         "executable" : "rosetta_scripts"},
          "structure_selection" : {"run_by" : "python"},

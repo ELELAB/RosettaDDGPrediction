@@ -235,7 +235,7 @@ def main():
 
 
     # If the protocol is a cartddg protocol
-    if family == "cartddg":
+    if family in ("cartddg", "cartddg2020"):
         
         # Get the directory where the ΔΔG calculation step was run
         step_run_dir = config_run["steps"]["cartesian"]["wd"]
@@ -345,7 +345,7 @@ def main():
         mut_path = os.path.join(step_run_dir_path, dir_name)
 
         # If the protocol is a cartddg protocol
-        if family == "cartddg":
+        if family in ("cartddg", "cartddg2020"):
             
             # Get the path to the output file
             ddg_out = os.path.join(mut_path, out_name)
@@ -454,7 +454,8 @@ def main():
                     pos_label = pos_label,
                     rescale = rescale,
                     list_contributions = list_contributions,
-                    conv_fact = conv_fact).result()
+                    conv_fact = conv_fact,
+                    family = family).result()
         
         # If something went wrong, report it and exit
         except Exception as e:
