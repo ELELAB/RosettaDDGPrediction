@@ -1,0 +1,102 @@
+# Configuration file needed to run the `relax` step of the
+# `cartddg2020` protocol with the `ref2015_cart` scoring function.
+
+
+# version of the configuration file
+version: 1
+
+
+#--------------------- GENERAL PROTOCOL OPTIONS ----------------------#
+
+
+# family the protocol belongs to
+family: cartddg2020
+
+
+#------------------------ PDB-RELATED OPTIONS ------------------------#
+
+
+pdb:
+  # whether PDB files containing multiple chains are allowed
+  # (false for cartddg protocols since they are used to predict
+  # the ΔΔG of stability of monomeric proteins)
+  allow_multi_chains: False
+  # whether PDB files with chain IDs missing are allowed
+  # (true for cartddg protocols since chain IDs are not necessary,
+  # because they only deal with monomeric proteins)
+  allow_no_chain_ids: True
+
+
+#--------------------------- PROTOCOL STEPS --------------------------#
+
+
+steps:
+  # first step of the cartddg protocol
+  relax2020:
+    # name of the working directory where the step will be run
+    wd: relax
+    # whether (and how) to remove unnecessary files at the end
+    # of the run
+    cleanlevel: !!null
+    # name of the flags file(s) that will be written and used
+    # to run the step
+    flagsfile: flags.txt
+    # name of the Rosetta log file(s) that will be written
+    output: relax.out
+    # Rosetta options to be used in conjunction with the Rosetta
+    # executable
+    options:
+      
+      #------------------------ Input options ------------------------#
+      
+      # whether to ignore unrecognized residues found in the PDB
+      -in:ignore_unrecognized_res: True
+      # whether the PDB file will be read as a full-atom structure
+      # as opposed to coarse-grained (should not be changed)
+      -in:file:fullatom: True
+
+      #------------------------ Output options -----------------------#
+
+      # prefix for output structures' names
+      -out:prefix: relax_
+      # file containing the scores (will be written in the
+      # directory where the step is run if no path is specified)
+      -out:file:scorefile: scorefile.sc
+      # score file format (should not be changed since for now
+      # only text score files are parsed correctly. Rosetta default
+      # is 'text'.)
+      -out:file:scorefile_format: text
+
+      #------------------- Tracing/logging options -------------------#
+
+      # logging level. 300 is INFO level.
+      -out:level: 300
+      # whether to add tracer channel name to the output
+      -out:chname: True
+      # whether to add a timestamp to tracer channel name
+      -out:chtimestamp: True
+      # save modelling times for each model in seconds
+      -out:save_times: True
+
+      #------------------------- Run options -------------------------#
+
+      # whether to turn on/off checkpointing
+      -run:checkpoint: True
+      # whether to write out detailed version info, if it was 
+      # available at compile time
+      -run:version: True
+      # whether to discard coordinates information for missing density
+      # atoms (whose occupancy is zero) defined in the input structure
+      -run:ignore_zero_occupancy: False
+
+      #------------------- RosettaScripts options --------------------#
+
+      # protocol XML file
+      -parser:protocol: "Cartddg2020_relax.xml"
+      # variable substitutions for the XML parser, in the form
+      # of name=value
+      -parser:script_vars:
+        # how many cycles of relax should be performed
+        repeats: 4
+        # score function name
+        scfname: "ref2015_cart"

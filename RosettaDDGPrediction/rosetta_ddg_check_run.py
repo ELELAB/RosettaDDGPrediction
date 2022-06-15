@@ -159,7 +159,7 @@ def main():
              in mutinfo[MUTINFO_COLS["dir_name"]]]
 
         # If it is a cartddg protocol
-        if family == "cartddg":
+        if family in ("cartddg", "cartddg2020"):
 
             # The directories where the calculations have been
             # performed are simply the directories containing
@@ -167,7 +167,7 @@ def main():
             dirs_paths = dirs_mutations
 
         # If it is a flexddg protocol
-        if family == "flexddg":
+        elif family == "flexddg":
 
             # Get the number of structures generated
             n_struct = config_run["mutations"]["nstruct"]

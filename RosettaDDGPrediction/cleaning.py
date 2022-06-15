@@ -47,7 +47,7 @@ def clean_folders(process,
     """
 
     # If the step is 'relax' (cartddg protocols)
-    if step_name == "relax":
+    if step_name in ("relax", "relax2020"):
         clean_func = clean_relax
     
     # If the step is 'cartesian' (cartddg protocols)

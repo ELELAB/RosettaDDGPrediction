@@ -144,7 +144,7 @@ def main():
 
     reslistfile_help = \
         "File containing the list of residue types to be included " \
-        "in the saturation mutagenesis It is used only if " \
+        "in the saturation mutagenesis. It is used only if " \
         "--saturation is provided."
     sat_args.add_argument("--reslistfile",
                           type = str,
