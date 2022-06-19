@@ -450,3 +450,56 @@ def generate_output_dataframes(dg_wt,
 
     # Return the structures data and the aggregate data
     return (aggr_df, struct_df)
+
+
+def write_mutatex_df(dfs,
+                     mutatex_file,
+                     index):
+
+    # Get the name of the column containing the total scores
+    # and the state
+    tot_score_col = ROSETTA_DF_COLS["tot_score"]
+    state_col = ROSETTA_DF_COLS["state"]
+
+    # Create an empty dictionary to store data that will be part
+    # of the final data frame
+    final_df_dict = {}
+
+    # For each mutation, data frame
+    for mutr, df in dfs.items():
+
+        # Get only the ΔΔG scores
+        ddg_scores = df[df[state_col] == "ddg"][tot_score_col]
+
+        # Get the average, standard deviation, minimum and
+        # maximum value
+        avg_val = ddg_scores.mean()
+        std_val = ddg_scores.std()
+        min_val = ddg_scores.min()
+        max_val = ddg_scores.max()
+
+        # Append the average, standard deviation, minimum and
+        # maximum value to the dictionary
+        final_df_dict[mutr] = [avg_val, std_val, min_val, max_val]
+
+    # Generate the final data frame, sorting the values according
+    # to the mutated residues
+    final_df = \
+        pd.DataFrame.from_dict(final_df_dict,
+                               orient = "index").reindex(index)
+
+    # Open the output file
+    out = open(mutatex_file, "a")
+
+    # Write out the first comment line
+    out.write("# avg\tstd\tmin\tmax\n")
+
+    # Save the data frame to the output file
+    final_df.to_csv(out,
+                    index = None,
+                    header = False,
+                    sep = " ",
+                    float_format = "%.5f")
+
+    # Close the output file
+    out.close()
