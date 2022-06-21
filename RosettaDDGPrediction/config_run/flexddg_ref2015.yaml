@@ -152,3 +152,21 @@ steps:
         backrubtrajstride: 7000
         # score function name
         scfname: "ref2015"
+
+    # post-processing step to extract the PDB structures from the
+    # database file they were written to (for flexddg protocols).
+    extract_structures:
+      # whether to extract the PDB structures from the database file
+      extract: True
+      # name of the flag file(s) that will be written and used
+      # to run the step
+      flagsfile: "flags_extract.txt"
+      # name of the Rosetta output file(s) that will be written
+      output: "extract_structures.out"
+      # options to be passed to the Rosetta executable performing the
+      # extraction (score_jd2)
+      options:
+        # whether the input file is a database file
+        -in:use_database: True
+        # whether the output files are PDB files
+        -out:pdb: True

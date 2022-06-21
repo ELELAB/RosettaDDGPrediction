@@ -31,6 +31,7 @@
 
 # Standard libary
 import argparse
+import collections
 import logging as log
 import os
 import os.path
@@ -42,6 +43,7 @@ import pandas as pd
 # RosettaDDGProtocols
 from . import aggregation 
 from .defaults import (
+    COMP_SEP,
     CONFIG_AGGR_DIR,
     CONFIG_AGGR_FILE,
     CONFIG_RUN_DIR,
@@ -60,62 +62,105 @@ def main():
 
     # Create argument parser
     parser = argparse.ArgumentParser()
+    general_args = \
+        parser.add_argument_group("General arguments")
+    mutatex_args = \
+        parser.add_argument_group(\
+            "Arguments related to the generation of " \
+            "MutateX-compatible outputs")
+
+
+    #---------------------------- General ----------------------------#
+
 
     cr_help = f"Configuration file of the protocol that was " \
               f"run. If it is a name without extension, it is " \
               f"assumed to be the name of a YAML file in " \
               f"{CONFIG_RUN_DIR}."
-    parser.add_argument("-cr", "--configfile-run",
-                        type = str,
-                        required = True,
-                        help = cr_help)
+    general_args.add_argument("-cr", "--configfile-run",
+                              type = str,
+                              required = True,
+                              help = cr_help)
 
     cs_help = \
         f"Configuration file containing settings to be used for " \
         f"the run. If it is a name without extension, it is assumed " \
         f"to be the name of a YAML file in {CONFIG_SETTINGS_DIR}. "
-    parser.add_argument("-cs", "--configfile-settings",
-                        type = str,
-                        required = True,
-                        help = cs_help)
+    general_args.add_argument("-cs", "--configfile-settings",
+                              type = str,
+                              required = True,
+                              help = cs_help)
 
     ca_help = f"Configuration file for data aggregation. " \
               f"If it is a name without extension, it is assumed " \
               f"to be the name of a YAML file in {CONFIG_AGGR_DIR}. " \
               f"Default is {CONFIG_AGGR_FILE}."
-    parser.add_argument("-ca", "--configfile-aggregate",
-                        type = str,
-                        default = CONFIG_AGGR_FILE,
-                        help = ca_help)
+    general_args.add_argument("-ca", "--configfile-aggregate",
+                              type = str,
+                              default = CONFIG_AGGR_FILE,
+                              help = ca_help)
 
     d_help = "Directory where the protocol was run. " \
              "Default is the current working directory."
-    parser.add_argument("-d", "--running-dir",
-                        type = str,
-                        default = os.getcwd(),
-                        help = d_help)
+    general_args.add_argument("-d", "--running-dir",
+                              type = str,
+                              default = os.getcwd(),
+                              help = d_help)
 
     od_help = \
         "Directory where to store the aggregated data. " \
         "Default is the current working directory."
-    parser.add_argument("-od", "--output-dir",
-                        type = str,
-                        default = os.getcwd(),
-                        help = od_help)
+    general_args.add_argument("-od", "--output-dir",
+                              type = str,
+                              default = os.getcwd(),
+                              help = od_help)
 
     mf_help = "File with info about the mutations (it " \
               "is created when running)." 
-    parser.add_argument("-mf", "--mutinfofile",
-                        type = str,
-                        help = mf_help)
+    general_args.add_argument("-mf", "--mutinfofile",
+                              type = str,
+                              help = mf_help)
 
     n_help = \
         "Number of processes to be started in parallel. " \
         "Default is one process (no parallelization)."
-    parser.add_argument("-n", "--nproc",
-                        type = int,
-                        default = 1,
-                        help = n_help)
+    general_args.add_argument("-n", "--nproc",
+                             type = int,
+                             default = 1,
+                             help = n_help)
+
+
+    #------------------ MutateX-compatible outputs -------------------#
+
+
+    mutatexconvert_help = \
+        "Request the conversion of the aggregate output files to " \
+        "MutateX-compatible outputs (the original files will be kept)."
+    mutatex_args.add_argument("--mutatex-convert",
+                              action = "store_true",
+                              help = mutatexconvert_help)
+
+
+    mutatex_reslistfile_help = \
+        "File containing the list of residue types used " \
+        "to sort the ones used in the saturation " \
+        "mutagenesis in the MutateX-compatible outputs."
+    mutatex_args.add_argument("--mutatex-reslistfile",
+                              type = str,
+                              default = None,
+                              help = mutatex_reslistfile_help)
+
+    mutatexdir_default = "mutatex_compatible"
+    mutatexdir_help = \
+        f"Name of the directory (inside the output directory) where " \
+        f"the MutateX-compatible output files will be stored. " \
+        f"Default is: '{mutatexdir_default}'."
+    mutatex_args.add_argument("--mutatex-dir",
+                              type = str,
+                              default = mutatexdir_default,
+                              help = mutatexdir_help)
+
+
 
     # Parse the arguments
     args = parser.parse_args()
@@ -132,6 +177,11 @@ def main():
     # Others
     mutinfo_file = util.get_abspath(args.mutinfofile)
     n_proc = args.nproc
+
+    # MutateX-compatible output
+    mutatex_convert = args.mutatex_convert
+    mutatex_reslistfile = args.mutatex_reslistfile
+    mutatex_dir = args.mutatex_dir
 
 
 
@@ -232,6 +282,29 @@ def main():
     
     # If the output directory does not exist, create it
     os.makedirs(out_dir, exist_ok = True)
+
+    # If the conversion to a MutateX-compatible format has been
+    # requested
+    if mutatex_convert:
+
+        # Get the path to the directory where the MutateX-compatible
+        # outputs will be stored
+        mutatex_dirpath = os.path.join(out_dir, mutatex_dir)
+
+        # Create the directory where the MutateX-compatible outputs
+        # will be stored
+        os.makedirs(mutatex_dirpath, exist_ok = True)
+
+        # Get the residue types to be used in the MutateX output
+        # files
+        mutatex_restypes = \
+            client.submit(util.get_res_list,
+                          mutatex_reslistfile)
+
+        # Create an empty dictionary to store the data frames
+        # from which data to create the MutateX-compatible
+        # outputs will be created
+        mutatex_dfs = collections.defaultdict(dict)
 
 
     # If the protocol is a cartddg protocol
@@ -340,6 +413,9 @@ def main():
     # For each mutation
     for i, (mut_name, dir_name, mut_label, pos_label) \
         in mutinfo.iterrows():
+
+        # Split the mutation name into its components
+        chain, wtr, numr, mutr = mut_name.split(COMP_SEP)
         
         # Get the mutation directory path
         mut_path = os.path.join(step_run_dir_path, dir_name)
@@ -396,7 +472,8 @@ def main():
                 # Structure path 
                 struct_path = os.path.join(mut_path, struct_num)
                 
-                # Path to the .db3 output file 
+                # Path to the .db3 output file containing the
+                # scores
                 db3_out = os.path.join(struct_path, out_name)
                 
                 # Try to create a dataframe from the .db3 output file
@@ -477,9 +554,20 @@ def main():
                                      struct_df_path,
                                      **dfs_options))
         
-        # Add the dataframes to the lists of all-mutations dataframes
+        # Add the dataframes to the lists of all-mutations data frames
         mut_aggr_dfs.append(aggr_df)
         mut_struct_dfs.append(struct_df)
+
+        # If the conversion to MutateX-compatible outputs has been
+        # requested
+        if mutatex_convert:
+            
+            # Add the mutation's structures' data frame to the
+            # corresponding position in the dictionary collecting the
+            # data frames that will be used to generate the
+            # MutateX-compatible outputs
+            mutatex_dfs[f"{wtr}{chain}{numr}"].update(\
+                {mutr : struct_df})
 
 
     # Aggregate the dataframes containing single mutations
@@ -500,6 +588,26 @@ def main():
     futures.append(client.submit(mut_struct_df.to_csv, \
                                  mut_struct_df_path, \
                                  **dfs_options))
+
+    # If the conversion to MutateX-compatible outputs has been
+    # requested
+    if mutatex_convert:
+
+        # For each file name and associated data frame
+        for mutatex_filename, dfs in mutatex_dfs.items():
+
+            # Create the path to the file that will contain
+            # the MutateX data frame
+            mutatex_filepath = \
+                os.path.join(mutatex_dirpath, mutatex_filename)
+
+            # Create and write the MutateX data frame to the
+            # designated output file
+            futures.append(\
+                client.submit(aggregation.write_mutatex_df,
+                              dfs = dfs,
+                              mutatex_file = mutatex_filepath,
+                              index = mutatex_restypes))
 
     # Gather pending futures
     client.gather(futures)

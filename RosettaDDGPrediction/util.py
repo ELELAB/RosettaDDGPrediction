@@ -53,6 +53,7 @@ from .defaults import (
     CONFIG_RUN_DIR,
     CONFIG_SETTINGS_DIR,
     DIR_MUT_SEP,
+    FLEXDDG_STATES,
     MULTI_MUT_SEP,
     MUT,
     MUT_DIR_NAME,
@@ -80,13 +81,13 @@ logger = log.getLogger(__name__)
 
 
 
-def get_rosetta_executable(exec_name, exec_path, exec_suffix):
+def get_rosetta_executable(exec_name,
+                           exec_path,
+                           exec_suffix,
+                           **kwargs):
     """Get the path to a Rosetta executable from the Rosetta
     installation directory.
     """
-
-    # Reset the worker logger
-    new_logger = reset_worker_logger()
 
     # Get all the executables available
     all_execs = os.listdir(exec_path)
@@ -130,9 +131,11 @@ def run_rosetta(executable,
                 use_mpi,
                 mpi_exec,
                 mpi_args,
-                mpi_n_proc):
+                mpi_n_proc,
+                **kwargs):
     """Run Rosetta.
     """
+
 
     # Make sure that the working directory exists. If not, create it.
     os.makedirs(wd, exist_ok = True)
@@ -169,7 +172,7 @@ def run_rosetta(executable,
             "returncode" : popen.returncode}
 
 
-def check_rosetta_run(dirs_paths):
+def check_rosetta_run(dirs_paths, **kwargs):
     """Check that a Rosetta calculation has exited without errors.
     """
 
@@ -191,7 +194,7 @@ def check_rosetta_run(dirs_paths):
     return crashed_runs_paths
 
 
-def parse_scorefile_text(scorefile):
+def parse_scorefile_text(scorefile, **kwargs):
     """Parse a Rosetta scorefile in text format to get the 
     structure numbers associated with the corresponding scores.
     """
@@ -233,7 +236,9 @@ def parse_scorefile_text(scorefile):
         return scores
 
 
-def write_flagsfile(options, flagsfile):
+def write_flagsfile(options,
+                    flagsfile,
+                    **kwargs):
     """Write a flags file with the Rosetta options
     that will be used for the run.
     """
@@ -271,7 +276,9 @@ def write_flagsfile(options, flagsfile):
         return os.path.abspath(flagsfile)
 
 
-def write_mutfile(mut, mutfile):
+def write_mutfile(mut,
+                  mutfile,
+                  **kwargs):
     """Write a mutfile containing the mutation performed
     in the current run (if any).
     """
@@ -306,7 +313,9 @@ def write_mutfile(mut, mutfile):
         return os.path.abspath(mutfile)
 
 
-def write_resfile(mut, resfile):
+def write_resfile(mut,
+                  resfile,
+                  **kwargs):
     """Write a resfile containing the mutation performed
     in the current run (if any).
     """
@@ -342,7 +351,7 @@ def write_resfile(mut, resfile):
 
 
 
-def convert_rosetta_option_to_string(option, value):
+def _convert_rosetta_option_to_string(option, value):
     """Convert a single Rosetta option and the associated value
     to a string representing the option/value pair.
     """
@@ -363,10 +372,10 @@ def convert_rosetta_option_to_string(option, value):
                          f"value '{value}' of option '{option}'.")
 
 
-def recursive_traverse(data,
-                       actions,
-                       keys = None,
-                       func = None):
+def _recursive_traverse(data,
+                        actions,
+                        keys = None,
+                        func = None):
     """Recursively traverse a dictionary performing actions on
     its items. It is used to traverse and modify the dictionary
     of options retrieved when parsing a YAML configuration file.
@@ -421,10 +430,10 @@ def recursive_traverse(data,
                 
                 # Recursively check the sub-dictionaries
                 # of the current dictionary
-                recursive_traverse(data = v,
-                                   actions = actions,
-                                   keys = keys,
-                                   func = func)
+                _recursive_traverse(data = v,
+                                    actions = actions,
+                                    keys = keys,
+                                    func = func)
         
             # If value is something else than a dictionary
             else:
@@ -445,7 +454,9 @@ def recursive_traverse(data,
         return data
 
 
-def get_option_key(options, option):
+def get_option_key(options,
+                   option,
+                   **kwargs):
     """Given a dictionary of Rosetta options and the name of
     a particular option as defined in ROSETTA_OPTIONS, get which
     one of the possible alterative keys to define that option
@@ -481,7 +492,8 @@ def get_option_key(options, option):
 
 def update_options(options,
                    pdb_file,
-                   mut = None):
+                   mut = None,
+                   **kwargs):
     """Update a dictionary of Rosetta options with the input
     PDB file and possibly replace specific placeholders with
     the corresponding attribute of a mutation.
@@ -555,7 +567,10 @@ def update_options(options,
     return new_options
 
 
-def get_out_pdb_name(options, pdb_file, struct = None):
+def get_out_pdb_name(options,
+                     pdb_file,
+                     struct = None,
+                     **kwargs):
     """Given a dictionary of Rosetta options, the name of
     an input PDB file that was the starting structure for the
     generation of an ensemble and possibly the number
@@ -589,7 +604,7 @@ def get_out_pdb_name(options, pdb_file, struct = None):
         return f"{prefix}{pdb_name}{suffix}.pdb"
 
 
-def get_config_run_version_1(config):
+def _get_config_run_version_1(config):
     """Get the configuration from version 1 YAML 
     configuration files.
     """
@@ -625,20 +640,41 @@ def get_config_run_version_1(config):
             # Recursively remove all options that map
             # to None and convert the other ones to strings
             new_step_opts = \
-                recursive_traverse(\
+                _recursive_traverse(\
                     data = step_opts,
                     actions = ["pop_empty", "substitute"],
-                    func = convert_rosetta_option_to_string)
+                    func = _convert_rosetta_option_to_string)
             
             # Update the dictionary of options with the new
             # options for the step
             config["steps"][step_name]["options"] = new_step_opts
 
+            # If the extraction of the structures is part of
+            # the step
+            if "extract_structures" in list(step.keys()):
+                
+                # Create a copy of the configuration
+                extract_opts = \
+                    dict(step["extract_structures"]["options"])
+
+                # Recursively remove all options that map
+                # to None and convert the other ones to strings
+                new_extract_opts = \
+                    _recursive_traverse(\
+                        data = extract_opts,
+                        actions = ["pop_empty", "substitute"],
+                        func = _convert_rosetta_option_to_string)
+                
+                # Update the dictionary of options with the new
+                # options for the step
+                config["steps"][step_name]["extract_structures"]["options"] = \
+                    new_extract_opts
+
     # Return the configuration
     return config
 
 
-def get_config_run(config_file):
+def get_config_run(config_file, **kwargs):
     """Get the configuration for running the protocol.
     """
 
@@ -665,7 +701,7 @@ def get_config_run(config_file):
     if config["version"] == 1:
         
         # Return the configuration written in version 1 format
-        return get_config_run_version_1(config = config)
+        return _get_config_run_version_1(config = config)
     
     # Only version 1 supported so far
     else:
@@ -675,7 +711,7 @@ def get_config_run(config_file):
         raise ValueError(errstr)
 
 
-def get_config_settings(config_file):
+def get_config_settings(config_file, **kwargs):
     """Get the configuration for the run's settings.
     """
 
@@ -699,7 +735,7 @@ def get_config_settings(config_file):
     return yaml.safe_load(open(config_file, "r"))
 
 
-def get_config_aggregate(config_file):
+def get_config_aggregate(config_file, **kwargs):
     """Get the configuration for data aggregation.
     """
     
@@ -733,16 +769,16 @@ def get_config_plot_version_1(config):
     
     # Substitute the font properties definitions
     # with the corresponding FontProperties instances
-    recursive_traverse(data = new_config,
-                       actions = ["substitute_dict"],
-                       func = fm.FontProperties,
-                       keys = {"fontproperties"})
+    _recursive_traverse(data = new_config,
+                        actions = ["substitute_dict"],
+                        func = fm.FontProperties,
+                        keys = {"fontproperties"})
     
     # Return the configuration
     return new_config
 
 
-def get_config_plot(config_file):
+def get_config_plot(config_file, **kwargs):
     """Get the plotting configuration.
     """
 
@@ -767,7 +803,7 @@ def get_config_plot(config_file):
     # Check the version of the configuration file
     if config["version"] == 1:
         # Return the configuration written in version 1 format
-        return get_config_plot_version_1(config = config)
+        return _get_config_plot_version_1(config = config)
     
     # Only version 1 is supported so far
     else:
@@ -782,7 +818,19 @@ def get_config_plot(config_file):
 
 
 
-def get_mut_list(list_file):
+def get_res_list(res_list_file):
+    """Parse the file containing the list of residue types
+    to be used for saturation mutagenesis scans.
+    """
+            
+    with open(res_list_file, "r") as f:
+        
+        # Return all lines that are not empty
+        return [l.rstrip("\n") for l in f \
+                if not re.match(r"^\s*$", l)]
+
+
+def _get_mut_list(list_file):
     """Parse the file containing the list of 
     positions/mutations.
     """
@@ -842,19 +890,8 @@ def get_mut_list(list_file):
         return mut_list
 
 
-def get_res_list(res_list_file):
-    """Parse the file containing the list of residue types
-    to be used for saturation mutagenesis scans.
-    """
-            
-    with open(res_list_file, "r") as f:
-        
-        # Return all lines that are not empty
-        return [l.rstrip("\n") for l in f \
-                if not re.match(r"^\s*$", l)]
 
-
-def get_saturation_mut_list(pos_list, res_list):
+def _get_saturation_mut_list(pos_list, res_list):
     """Generate a mutation list for saturation mutagenesis.
     
     Every position specified as (chain, wild_type_residue,
@@ -937,7 +974,7 @@ def get_saturation_mut_list(pos_list, res_list):
     return sat_mut_list
 
 
-def convert_to_pose_numbering(mut_list, pdb_file):
+def _convert_to_pose_numbering(mut_list, pdb_file):
     """Retun a copy of the mutation list with residue numbers
     changed to the Rosetta pose numbering.
     """
@@ -994,7 +1031,7 @@ def convert_to_pose_numbering(mut_list, pdb_file):
     return pose_mut_list
 
 
-def generate_mutation_dir_path(mut_dict):
+def _generate_mutation_dir_path(mut_dict):
     """Given a mutation, generate the corresponding directory
     name (since the Rosetta-compatible name of the mutation may
     not be usable as-it-is as a directory name).
@@ -1049,7 +1086,8 @@ def get_mutations(list_file,
                   pdb_file,
                   res_numbering,
                   extra,
-                  n_struct):
+                  n_struct,
+                  **kwargs):
     """Get the list of mutations to be performed.
     """
 
@@ -1065,7 +1103,7 @@ def get_mutations(list_file,
 
 
     # Get the mutations/positions list
-    mut_list = get_mut_list(list_file)
+    mut_list = _get_mut_list(list_file)
 
     # If a list of residue types has been passed, assume it is a
     # saturation mutagenesis scan
@@ -1076,7 +1114,7 @@ def get_mutations(list_file,
         
         # Treat the mutations' list as a list of positions
         # and generate the new list of mutations
-        mut_list = get_saturation_mut_list(mut_list, res_list)
+        mut_list = _get_saturation_mut_list(mut_list, res_list)
 
     # Generate a copy of the original mutation list (in case it
     # gets changed because of a different residue numbering)
@@ -1091,7 +1129,7 @@ def get_mutations(list_file,
     if res_numbering == "pose":
         
         # Convert the numbering from PDB to pose numbering
-        mut_list = convert_to_pose_numbering(mut_list, pdb_file)
+        mut_list = _convert_to_pose_numbering(mut_list, pdb_file)
 
     # Otherwise, assume it follows the PDB convention (requires no
     # conversion)
@@ -1168,7 +1206,8 @@ def get_mutations(list_file,
         for mut_dict in muts:
             
             # Add the mutation directory name and directory path
-            mut_dir_path, mut_dir_name = generate_mutation_dir_path(mut_dict)
+            mut_dir_path, mut_dir_name = \
+                _generate_mutation_dir_path(mut_dict)
             mut_dict[MUT_DIR_PATH] = mut_dir_path
             mut_dict[MUT_DIR_NAME] = mut_dir_name
 
@@ -1181,7 +1220,8 @@ def get_mutations(list_file,
 
 def write_mutinfo_file(mutations_original,
                        out_dir,
-                       mutinfo_file):
+                       mutinfo_file,
+                       **kwargs):
     """Write a comma-separated file containing the names of the
     directories containing the results for all mutations, the
     names of the mutations as written in the mutations list file
@@ -1261,7 +1301,7 @@ def write_mutinfo_file(mutations_original,
                 
 
 
-def get_mutinfo(mutinfo_file):
+def get_mutinfo(mutinfo_file, **kwargs):
     """Create a data frame from a comma-separated file containing 
     the names of the directories containing the results for all 
     mutations, the names of the mutations as written in the 
@@ -1305,7 +1345,8 @@ def get_mutinfo(mutinfo_file):
 
 def check_pdb_file(pdb_file,
                    allow_multi_chains,
-                   allow_no_chain_ids):
+                   allow_no_chain_ids,
+                   **kwargs):
     """Check a PDB file before passing it to Rosetta.
     """
     
@@ -1372,7 +1413,7 @@ def check_pdb_file(pdb_file,
     return pdb_file
 
 
-def get_abspath(path):
+def get_abspath(path, **kwargs):
     """Given a path, return its absolute path. Return
     None if the path given is None.
     """
@@ -1380,10 +1421,59 @@ def get_abspath(path):
     return os.path.abspath(path) if path is not None else path
 
 
-def get_items(d, keys, default = None):
+def get_items(d,
+              keys,
+              default = None,
+              **kwargs):
     """Similar to operator.itemgetter but defaults to
     a specific value if the key is not found (instead of
     throwing an exception).
     """
 
     return [d.get(k, default) for k in keys]
+
+
+def rename_structures_flexddg(path,
+                              r_script_options,
+                              **kwargs):
+
+    # Get the number of backrub trials
+    backrub_n_trials = \
+        r_script_options[get_option_key(options = r_script_options,
+                                        option = "backrub_n_trials")]
+                            
+    # Get the backrub trajectory stride
+    backrub_traj_stride = \
+        r_script_options[get_option_key(options = r_script_options,
+                                       option = "backrub_traj_stride")]
+
+    # Compute the trajectory stride
+    traj_stride = int(backrub_n_trials) // int(backrub_traj_stride)
+
+    # For each file in the specified path
+    for f in os.listdir(path):
+
+        # Split the name of the file into path leading up to
+        # the file and file base name
+        f_path, f_basename = os.path.split(os.path.join(path, f))
+
+        # Get the match between the pattern that we look for
+        # the name of the structure
+        struct_match = re.match(r"(\d+)_0001.pdb", f_basename)
+        
+        # If the current file is a structure to be renamed
+        if struct_match:
+
+            # Get the structure ID
+            struct_id = int(struct_match.group(1))
+
+            # Set the new name for the structure
+            new_fname = \
+                "%s_%05d.pdb" % \
+                    (FLEXDDG_STATES[(struct_id-1) % len(FLEXDDG_STATES)],
+                    (((struct_id-1) // len(FLEXDDG_STATES)) + 1) \
+                    * traj_stride)
+
+            # Rename the structure
+            os.rename(os.path.join(f_path, f_basename), \
+                      os.path.join(f_path, new_fname))

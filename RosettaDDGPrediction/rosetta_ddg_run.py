@@ -47,6 +47,7 @@ from .defaults import (
     CONFIG_SETTINGS_DIR,
     MUT_DIR_NAME,
     MUT_DIR_PATH,
+    ROSETTA_OPTIONS,
     ROSETTA_PROTOCOLS
 )
 from . import pythonsteps
@@ -330,7 +331,11 @@ def main():
 
     
     # Create an empty list to keep track of the running futures
-    futures = [] 
+    futures = []
+
+    # Create an empty list to keep track of all the directories
+    # where the previous step was run
+    prev_rundirs = []
 
     # For each step of the protocol that has to be run
     for step_name, step in steps.items():
@@ -363,8 +368,11 @@ def main():
             # Get the executable needed to run the step
             executable = step_features["executable"]
 
+            # Get the step working directory
+            step_wd = step["wd"]
+
             # If the specified directory was "."
-            if step["wd"] == ".":
+            if step_wd == ".":
                 
                 # Run in the current directory without generating
                 # a sub-directory for the current step
@@ -373,7 +381,7 @@ def main():
             else:
                 
                 # Set a new directory
-                step_wd = os.path.join(run_dir, step["wd"])
+                step_wd = os.path.join(run_dir, step_wd)
 
             # Try to get the Rosetta executable
             try:
@@ -445,6 +453,10 @@ def main():
                                   wd = step_wd,
                                   options = step_opts,
                                   level = clean_level))
+
+                # Add the directory where the step was run to
+                # the list of directories
+                prev_rundirs.append(step_wd)
 
             # If it is a ΔΔG prediction step
             elif role == "ddg":
@@ -575,13 +587,191 @@ def main():
                     except Exception as e:
                         
                         errstr = \
-                            f"'{step_name}' run in {step_wd} exited " \
+                            f"'{step_name}' run in {mut_wd} exited " \
                             f"with code {process['returncode']}. " \
                             f"The following exception occurred: {e}"
                         
                         # Log the error and exit
                         log.errstr(errstr)
                         sys.exit(errstr)
+
+                    # If the step was a flexddg step
+                    if step_name == "flexddg":
+
+                        # Get the options regarding the extraction
+                        # of structures from the database file
+                        extract_options = step["extract_structures"]
+
+                        # The extraction of the structures is not
+                        # a 'step' per se because it needs to be
+                        # run in every folder where the flexddg
+                        # step was run and before the unnecessary
+                        # output files are deleted, since one
+                        # of these files is needed to extract
+                        # the structures
+
+                        # Get whether the user has requested the
+                        # extraction
+                        if extract_options["extract"]:
+
+                            # Get the name of the Rosetta executable
+                            # responsible for the extraction
+                            exec_extract_name = \
+                                step_features["executable_extract"]
+
+                            # Set the flags file
+                            flagsfile_extract = \
+                                os.path.join(\
+                                    mut_wd,
+                                    extract_options["flagsfile"])
+
+                            # Set the Rosetta output
+                            output_extract = \
+                                os.path.join(\
+                                    mut_wd,
+                                    extract_options["output"])
+
+                            # Try to get the Rosetta executable
+                            # The 'wait_on' option does not do
+                            # anything apart from telling Dask
+                            # that this task should only be
+                            # executed if the flexddg run
+                            # completed successfully
+                            try:
+                                
+                                executable_extract = \
+                                    client.submit(\
+                                        util.get_rosetta_executable,
+                                        exec_name = exec_extract_name,
+                                        exec_path = exec_path,
+                                        exec_suffix = exec_suffix,
+                                        wait_on = [process])
+
+                            
+                            # If something went wrong, report it
+                            except Exception as e:
+                                
+                                errstr = \
+                                    f"Could not get Rosetta " \
+                                    f"executable " \
+                                    f"'{executable_extract}' " \
+                                    f"from {exec_path}."
+                                log.error(errstr)
+
+                            # Get the options to be passed to the
+                            # Rosetta executable
+                            opts_extract = extract_options["options"]
+
+                            # Get the RosettaScripts options specified
+                            # in the flexddg protocol
+                            r_script_options = \
+                                step_opts[script_vars_key]
+
+                            # Get the key used to define the database
+                            # file containing the structures in the
+                            # configuration file
+                            # The 'wait_on' option does not do
+                            # anything apart from telling Dask
+                            # that this task should only be
+                            # executed if the flexddg run
+                            # completed successfully
+                            db_name_key = \
+                                client.submit(\
+                                    util.get_option_key,
+                                    options = r_script_options,
+                                    option = "struct_db_file",
+                                    wait_on = [process]).result()
+
+                            # Get the path to the database file
+                            db_file = \
+                                os.path.join(\
+                                    mut_wd,
+                                    r_script_options[db_name_key])
+
+                            # Get the key that will be used to define
+                            # the database file when given as input
+                            # for the extraction
+                            db_file_key = \
+                                sorted(ROSETTA_OPTIONS["db_name"],
+                                       key = len,
+                                       reverse = True)[0]
+
+                            # Update the options with the database file
+                            opts_extract.update(\
+                                {db_file_key : db_file})
+
+                            # Write the flagsfile
+                            # The 'wait_on' option does not do
+                            # anything apart from telling Dask
+                            # that this task should only be
+                            # executed if the flexddg run
+                            # completed successfully
+                            flagsfile_extract = \
+                                client.submit(\
+                                    util.write_flagsfile,
+                                    options = opts_extract,
+                                    flagsfile = flagsfile_extract,
+                                    wait_on = [process])
+
+                            # Submit the extraction
+                            try:
+                                
+                                process_extract = \
+                                    client.submit(\
+                                        util.run_rosetta,
+                                        executable = executable_extract,
+                                        flagsfile = flagsfile_extract,
+                                        output = output_extract,
+                                        wd = mut_wd,
+                                        use_mpi = settings["mpi"]["usempi"],
+                                        mpi_exec = settings["mpi"]["mpiexec"],
+                                        mpi_args = settings["mpi"]["mpiargs"],
+                                        mpi_n_proc = 1)
+                            
+                            # If something went wrong, report it
+                            except Exception as e:
+                                
+                                errstr = \
+                                    f"The extraction of the " \
+                                    f"structures from the file " \
+                                    f"'{db_file}' in {mut_wd} " \
+                                    f"exited with code " \
+                                    f"{process['returncode']}. " \
+                                    f"The following exception " \
+                                    f"occurred: {e}"
+                                
+                                # Log the error
+                                log.errstr(errstr)
+
+                            # Try to rename the structures
+                            # The 'wait_on' option does not do
+                            # anything apart from telling Dask
+                            # that this task should only be
+                            # executed if the extraction 
+                            # completed successfully
+                            try:
+                                
+                                process_rename = \
+                                    client.submit(\
+                                        util.rename_structures_flexddg,
+                                        path = mut_wd,
+                                        r_script_options = r_script_options,
+                                        wait_on = [process_extract])
+                            
+                            # If something went wrong, report it
+                            except Exception as e:
+                                
+                                errstr = \
+                                    f"Could not rename the  " \
+                                    f"structures extracted from " \
+                                    f"the file '{db_file}' in " \
+                                    f"{mut_wd}." \
+                                    f"The following exception " \
+                                    f"occurred: {e}"
+                                
+                                # Log the error
+                                log.errstr(errstr)
+
 
                     # Submit also the post-run cleaning
                     futures.append(\
