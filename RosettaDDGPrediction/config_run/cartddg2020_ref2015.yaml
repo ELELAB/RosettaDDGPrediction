@@ -234,9 +234,6 @@ steps:
       # NEW IN CARTDDG2020 - how many models need to be in range
       # for the solution to be considered converged
       -ddg:n_converged: 2
-      # NEW IN CARTDDG2020 - whether to use the legacy version of
-      # the code
-      -ddg:legacy: False
 
       #------------------ Scoring function options -------------------#
 
