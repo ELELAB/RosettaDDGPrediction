@@ -454,12 +454,14 @@ def generate_output_dataframes(dg_wt,
 
 def write_mutatex_df(dfs,
                      mutatex_file,
-                     index):
+                     index,
+                     family):
 
     # Get the name of the column containing the total scores
     # and the state
     tot_score_col = ROSETTA_DF_COLS["tot_score"]
     state_col = ROSETTA_DF_COLS["state"]
+    struct_num_col = ROSETTA_DF_COLS["struct_num"]
 
     # Create an empty dictionary to store data that will be part
     # of the final data frame
@@ -468,15 +470,56 @@ def write_mutatex_df(dfs,
     # For each mutation, data frame
     for mutr, df in dfs.items():
 
-        # Get only the ΔΔG scores
-        ddg_scores = df[df[state_col] == "ddg"][tot_score_col]
+        # If the protocol belongs to the new cartddg2020 family
+        if family == "cartddg2020":
 
-        # Get the average, standard deviation, minimum and
-        # maximum value
-        avg_val = ddg_scores.mean()
-        std_val = ddg_scores.std()
-        min_val = ddg_scores.min()
-        max_val = ddg_scores.max()
+            # Sort the data frame so that the row corresponding to the
+            # structure pair with the lowest energy score for the
+            # mutant is the first one
+            low_ddg_score_first = \
+                df.loc[df[state_col] == "mut"].sort_values(\
+                    by = tot_score_col,
+                    axis = 0,
+                    ascending = True)
+
+            # Get the number of the structure pair with lowest energy
+            # score for the mutant
+            struct_num_low = \
+                low_ddg_score_first.iloc[0][struct_num_col]
+
+            # The ΔΔG score will be the one associated with the 
+            # structure pair having the lowest energy score for
+            # the mutant
+            avg_val = \
+                df.loc[(df[struct_num_col] == struct_num_low) & \
+                       (df[state_col] == "ddg"), tot_score_col].item()
+
+            # There will be only one value, which will also
+            # correspond to the minimum and maximum value
+            # (the standard deviation will be 0.0)
+            std_val = 0.0
+            min_val = avg_val
+            max_val = avg_val
+
+            # Set the furst line that will be printed to
+            # the output file
+            first_line = "# low\tstd\tmin\tmax\n"
+        
+        elif family in ("cartddg", "flexddg"):
+
+            # Get only the ΔΔG scores
+            ddg_scores = df[df[state_col] == "ddg"][tot_score_col]
+            
+            # Get the average, standard deviation, minimum and
+            # maximum value
+            avg_val = ddg_scores.mean()
+            std_val = ddg_scores.std()
+            min_val = ddg_scores.min()
+            max_val = ddg_scores.max()
+
+            # Set the furst line that will be printed to
+            # the output file
+            first_line = "# avg\tstd\tmin\tmax\n"
 
         # Append the average, standard deviation, minimum and
         # maximum value to the dictionary
@@ -491,8 +534,8 @@ def write_mutatex_df(dfs,
     # Open the output file
     out = open(mutatex_file, "a")
 
-    # Write out the first comment line
-    out.write("# avg\tstd\tmin\tmax\n")
+    # Write out the first line
+    out.write(first_line)
 
     # Save the data frame to the output file
     final_df.to_csv(out,
