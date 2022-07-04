@@ -413,9 +413,6 @@ def main():
     # For each mutation
     for i, (mut_name, dir_name, mut_label, pos_label) \
         in mutinfo.iterrows():
-
-        # Split the mutation name into its components
-        chain, wtr, numr, mutr = mut_name.split(COMP_SEP)
         
         # Get the mutation directory path
         mut_path = os.path.join(step_run_dir_path, dir_name)
@@ -561,6 +558,22 @@ def main():
         # If the conversion to MutateX-compatible outputs has been
         # requested
         if mutatex_convert:
+
+            # Try to split the mutation name into its components
+            try:
+
+                chain, wtr, numr, mutr = mut_name.split(COMP_SEP)
+
+            # If something went wrong, report it
+            except Exception as e:
+                
+                errstr = \
+                    f"Could not generate MutateX-compatible " \
+                    f"outputs for the mutation {mut_name}. " \
+                    f"Please note that the conversion does not " \
+                    f"work for multiple simultaneous mutations. "
+                log.error(errstr)
+                continue
             
             # Add the mutation's structures' data frame to the
             # corresponding position in the dictionary collecting the
@@ -607,7 +620,8 @@ def main():
                 client.submit(aggregation.write_mutatex_df,
                               dfs = dfs,
                               mutatex_file = mutatex_filepath,
-                              index = mutatex_restypes))
+                              index = mutatex_restypes,
+                              family = family))
 
     # Gather pending futures
     client.gather(futures)
