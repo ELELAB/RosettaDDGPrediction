@@ -1229,6 +1229,35 @@ def write_mutinfo_file(mutations_original,
     data and plotting.
     """
 
+    # Get the name of the mutinfo file without the extension
+    mutinfo_filename, mutinfo_ext = os.path.splitext(mutinfo_file)
+
+    # Check if a mutinfo file with the name specified in
+    # the config file is already present (or others
+    # already numbered)
+    mutinfo_files = \
+        [f for f in os.listdir(step_wd) if f == mutinfo_file \
+         or re.match(f"{mutinfo_filename}[0-9]{mutinfo_ext}", f)]
+
+    # If (an)other mutinfo file(s) was (were) found
+    if mutinfo_files:
+
+        # Get the file numbers
+        num_files = \
+            [f.lstrip(mutinfo_filename).rstrip(mutinfo_ext) \
+             for f in mutinfo_files]
+
+        # Sort the file numbers
+        num_files_sorted = \
+            sorted([int(n) if n.isdigit() else 0 for n in num_files])
+
+        # Set the name of the new mutinfo file, given the files
+        # already found (name of the original mutinfo file name +
+        # higherst file number found+1 + original mutinfo file
+        # extension
+        mutinfo_file = \
+            f"{mutinfo_filename}{num_files_sorted[-1]+1}{mutinfo_ext}"
+
     # Set the path to the output file
     mutinfo_file_path = os.path.join(out_dir, mutinfo_file)
 
