@@ -52,7 +52,7 @@ from .defaults import (
 )
 from .util import ( 
      get_items,
-     recursive_traverse
+     _recursive_traverse
 )
 
 

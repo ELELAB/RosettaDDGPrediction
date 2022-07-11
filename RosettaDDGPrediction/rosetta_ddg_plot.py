@@ -247,11 +247,12 @@ def main():
         # If something went wrong, report it and exit
         except Exception as e:
 
+            scf_name = ROSETTA_DF_COLS["scf_name"]
             errstr = \
                 f"Could not retrieve the name of the scoring " \
                 f"function from {in_file}. Make sure there the " \
                 f"column containing the scoring function is " \
-                f"named '{ROSETTA_DF_COLS["scf_name"]}'."
+                f"named '{scf_name}'."
             log.error(errstr)
             sys.exit(errstr)
 
