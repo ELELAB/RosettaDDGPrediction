@@ -759,7 +759,7 @@ def get_config_aggregate(config_file, **kwargs):
     return yaml.safe_load(open(config_file, "r"))
 
 
-def get_config_plot_version_1(config):
+def _get_config_plot_version_1(config):
     """Parse the configuration file for plotting,
     version 1.
     """
