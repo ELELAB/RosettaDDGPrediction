@@ -68,6 +68,7 @@ from .defaults import (
     ROSETTA_PROTOCOLS,
     ROSETTA_SCRIPTS_DIR,
     STRUCT,
+    STRUCT_EXTRACTED_PATTERN,
     WTR
 )
 
@@ -463,6 +464,10 @@ def get_option_key(options,
     has been used in the given dictionary.
     """
 
+    # Reset the worker's logger so that log messsages reach
+    # the output
+    logger = reset_worker_logger()
+
     # Get the values of each of the command line arguments that
     # can define the option of interest in the options dictionary
     # (it would be an empty string if not found)
@@ -834,6 +839,10 @@ def _get_mut_list(list_file):
     """Parse the file containing the list of 
     positions/mutations.
     """
+
+    # Reset the worker's logger so that log messsages reach
+    # the output
+    logger = reset_worker_logger()
 
     with open(list_file, "r") as f:
         
@@ -1229,40 +1238,59 @@ def write_mutinfo_file(mutations_original,
     data and plotting.
     """
 
+    # Reset the worker's logger so that log messsages reach
+    # the output
+    logger = reset_worker_logger()
+
     # Get the name of the mutinfo file without the extension
     mutinfo_filename, mutinfo_ext = os.path.splitext(mutinfo_file)
 
-    # Check if a mutinfo file with the name specified in
-    # the config file is already present (or others
-    # already numbered)
-    mutinfo_files = \
-        [f for f in os.listdir(step_wd) if f == mutinfo_file \
-         or re.match(f"{mutinfo_filename}[0-9]{mutinfo_ext}", f)]
+    # If the output directory has already been created
+    if os.path.exists(out_dir):
 
-    # If (an)other mutinfo file(s) was (were) found
-    if mutinfo_files:
+        # Check if a mutinfo file with the name specified in
+        # the config file is already present (or others
+        # already numbered)        
+        mutinfo_files = \
+            [f for f in os.listdir(out_dir) if f == mutinfo_file \
+             or re.match(f"{mutinfo_filename}[0-9]{mutinfo_ext}", f)]
 
-        # Get the file numbers
-        num_files = \
-            [f.lstrip(mutinfo_filename).rstrip(mutinfo_ext) \
-             for f in mutinfo_files]
+        # If (an)other mutinfo file(s) was (were) found
+        if mutinfo_files:
 
-        # Sort the file numbers
-        num_files_sorted = \
-            sorted([int(n) if n.isdigit() else 0 for n in num_files])
+            # Get the file numbers
+            num_files = \
+                [f.lstrip(mutinfo_filename).rstrip(mutinfo_ext) \
+                 for f in mutinfo_files]
 
-        # Set the name of the new mutinfo file, given the files
-        # already found (name of the original mutinfo file name +
-        # higherst file number found+1 + original mutinfo file
-        # extension
-        mutinfo_file = \
-            f"{mutinfo_filename}{num_files_sorted[-1]+1}{mutinfo_ext}"
+            # Sort the files in ascending order
+            files_sorted = \
+                sorted(list(zip(num_files, mutinfo_files)),
+                       key = lambda x: x[0])
 
-    # Set the path to the output file
-    mutinfo_file_path = os.path.join(out_dir, mutinfo_file)
+            # Set the name of the new mutinfo file, given the files
+            # already found (name of the original mutinfo file name +
+            # higherst file number found+1 + original mutinfo file
+            # extension
+            mutinfo_file = \
+                f"{mutinfo_filename}{int(files_sorted[-1][0])+1}" \
+                f"{mutinfo_ext}"
+
+            # Warn the user about thw existing mutinfo files
+            # and the new one that will be written
+            warnstr = \
+                f"The following mutinfo files have been found in " \
+                f"{out_dir}: " \
+                f"{', '.join([i[1] for i in files_sorted])}. A new " \
+                f"file named {mutinfo_file} will be written for " \
+                f"this run."
+            logger.warning(warnstr)
 
     # Make sure that the directory exists. If not, create it.
     os.makedirs(out_dir, exist_ok = True)
+
+    # Set the path to the output file
+    mutinfo_file_path = os.path.join(out_dir, mutinfo_file)
 
     with open(mutinfo_file_path, "w") as out:
         
@@ -1283,6 +1311,7 @@ def write_mutinfo_file(mutations_original,
             mut_label_def = []
             pos_label_def = []
 
+            # Hashable name for the mutation
             mut_hash = tuple([tuple(i.items()) for i in mut_orig[MUT]])
 
             # For each single mutation
@@ -1314,7 +1343,7 @@ def write_mutinfo_file(mutations_original,
                 pos_label_def.append(\
                     f"{wtr_orig}{numr_orig}")
                 
-                # 
+                # If the mutation has not been written yet
                 if i == len(mut_orig[MUT])-1 \
                 and mut_hash not in muts_written:
                 
@@ -1462,9 +1491,70 @@ def get_items(d,
     return [d.get(k, default) for k in keys]
 
 
+def check_structures_extraction(wd):
+    """Check whether the extraction of the structures or their
+    renaming has already happened. 
+    """
+
+    # Get the files in the directory
+    files_in_wd = os.listdir(wd)
+
+    # Get the structures extracted from the database file
+    struct_extracted = \
+        list(filter(lambda x: re.match(STRUCT_EXTRACTED_PATTERN, x),
+                    files_in_wd))
+
+    # If a structure whose name begins with the given prefix has been
+    # found, the extraction has been performed (all structures
+    # in the folder are extracted at once)
+    is_struct_extracted = True if len(struct_extracted) > 0 else False
+
+    # Get the structures renamed
+    struct_renamed = \
+        list(filter(lambda x: x.startswith(FLEXDDG_STATES) \
+                    and x.endswith(".pdb"),
+                    files_in_wd))
+
+    # If a structure whose name begins with any of the prefixes
+    # has been found, the renaming has been performed (all structures
+    # in the folder are renamed at once)
+    is_struct_renamed = True if len(struct_renamed) > 0 else False
+
+    # If the flag for the structures' renaming is on
+    if is_struct_renamed:
+
+        # If also the flag for structures' extraction is on at
+        # this point (which means some structures that have
+        # been extracted but not renamed are left for some reason)
+        if is_struct_extracted:
+
+            # Turn off the is_struct_extracted flag
+            is_struct_renamed = False
+
+        # Otherwise (no leftover structure to rename)
+        else:
+
+            # Turn on the flag for the structures' extractuon
+            # (since none of the structures has their original
+            # name after renaming, the is_struct_extracted flag
+            # would be now False even if the
+            # structures have been in fact extracted)
+            is_struct_extracted = True
+
+    # Return the two flags reporting the status of the extraction
+    return is_struct_extracted, is_struct_renamed
+
+
 def rename_structures_flexddg(path,
                               r_script_options,
                               **kwargs):
+    """Rename the structures extracted from the db3 file
+    produced by the flexddg protocols.
+    """
+
+    # Reset the worker's logger so that log messsages reach
+    # the output
+    logger = reset_worker_logger()
 
     # Get the number of backrub trials
     backrub_n_trials = \
@@ -1479,6 +1569,14 @@ def rename_structures_flexddg(path,
     # Compute the trajectory stride
     traj_stride = int(backrub_n_trials) // int(backrub_traj_stride)
 
+    # Create an empty list to store the structures to be renamed
+    # (for logging purposes)
+    struct_to_rename = []
+
+    # Create an empty list to store the structures that have been
+    # renamed (for logging purposes)
+    struct_renamed = []
+
     # For each file in the specified path
     for f in os.listdir(path):
 
@@ -1488,7 +1586,7 @@ def rename_structures_flexddg(path,
 
         # Get the match between the pattern that we look for
         # the name of the structure
-        struct_match = re.match(r"(\d+)_0001.pdb", f_basename)
+        struct_match = re.match(STRUCT_EXTRACTED_PATTERN, f_basename)
         
         # If the current file is a structure to be renamed
         if struct_match:
@@ -1506,3 +1604,21 @@ def rename_structures_flexddg(path,
             # Rename the structure
             os.rename(os.path.join(f_path, f_basename), \
                       os.path.join(f_path, new_fname))
+
+            # Add the old name to the list of structures to
+            # be renamed and the new name in the list of
+            # structures renamed
+            struct_to_rename.append(f_basename)
+            struct_renamed.append(new_fname)
+
+    # Inform the user about which structures were found and renamed
+    infostr_to_rename = \
+        f"The following structures (extracted from the protocol's " \
+        f"output database) were found and will be renamed:" \
+        f"\n{', '.join(struct_to_rename)}."
+    logger.info(infostr_to_rename)
+
+    infostr_renamed = \
+        f"The following structures have been renamed: " \
+        f"\n{', '.join(struct_renamed)}."
+    logger.info(infostr_renamed)
