@@ -1,8 +1,8 @@
 # RosettaDDGPrediction
 
-**Rosetta version**: 3.12
+**Rosetta version**: 3.12 and 2022.11
 
-**Last updated**: November 25th, 2020
+
 
 ## Overview
 
@@ -47,3 +47,11 @@ Upon successful installation, you should have three executable (`rosetta_ddg_run
 ## Usage
 
 Please refer to the user guide for how to use RosettaDDGPrediction.
+
+
+## Citation 
+
+RosettaDDGPrediction for high-throughput mutational scans: from stability to binding
+
+Valentina Sora, Adrian Otamendi Laspiur, Kristine Degn, Matteo Arnaudi, Mattia Utichi, Ludovica Beltrame, Dayana De Menezes, Matteo Orlandi, Olga Rigina, Peter Wad Sackett, Karin Wadt, Kjeld Schmiegelow, Matteo Tiberti, Elena Papaleo1*
+submitted to Protein Science
