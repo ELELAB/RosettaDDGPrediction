@@ -54,4 +54,4 @@ Please refer to the user guide for how to use RosettaDDGPrediction.
 RosettaDDGPrediction for high-throughput mutational scans: from stability to binding
 
 Valentina Sora, Adrian Otamendi Laspiur, Kristine Degn, Matteo Arnaudi, Mattia Utichi, Ludovica Beltrame, Dayana De Menezes, Matteo Orlandi, Olga Rigina, Peter Wad Sackett, Karin Wadt, Kjeld Schmiegelow, Matteo Tiberti, Elena Papaleo1*
-submitted to Protein Science
+submitted to Protein Science and on biorxiv:  https://doi.org/10.1101/2022.09.02.506350 
