@@ -35,14 +35,14 @@ from . import util
 
 
 
-def clean_folders(process,
-                  step_name,
+def clean_folders(step_name,
                   wd,
                   options,
-                  level):
+                  level,
+                  wait_on = None):
     """Clean up folders after having run a protocol step.
 
-    NB: 'process' is passed to ensure it is finished before
+    NB: 'wait_on' is passed to ensure it is finished before
     the cleaning starts (because of the Dask task graph).
     """
 

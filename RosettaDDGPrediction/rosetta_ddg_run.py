@@ -38,7 +38,11 @@ import os.path
 import sys
 # Third-party packages
 import dask
-from distributed import Client, LocalCluster
+from distributed import (
+    Client,
+    fire_and_forget,
+    LocalCluster
+)
 import yaml
 # RosettaDDGProtocols
 from . import cleaning
@@ -47,7 +51,6 @@ from .defaults import (
     CONFIG_SETTINGS_DIR,
     MUT_DIR_NAME,
     MUT_DIR_PATH,
-    ROSETTA_OPTIONS,
     ROSETTA_PROTOCOLS
 )
 from . import pythonsteps
@@ -210,10 +213,12 @@ def main():
     # If something went wrong, report it and exit
     except Exception as e:
         
-        errstr = f"Could not parse the configuration file " \
-                 f"{config_file_settings}: {e}"
+        errstr = \
+            f"Could not parse the configuration file " \
+            f"{config_file_settings}: {e}"
         log.error(errstr)
         sys.exit(errstr)
+
 
     # Create the local cluster
     cluster = LocalCluster(n_workers = n_proc,
@@ -231,17 +236,17 @@ def main():
     # Try to get the protocol options from the YAML file
     try:
         
-        options = client.submit(util.get_config_run,
-                                config_file = config_file_run).result()
+        options = util.get_config_run(config_file = config_file_run)
     
     # If something went wrong, report it and exit
     except Exception as e:
         
-        errstr = f"Could not parse the configuration " \
-                 f"file {config_file_run}: {e}"
+        errstr = \
+            f"Could not parse the configuration " \
+            f"file {config_file_run}: {e}"
         log.error(errstr)
         sys.exit(errstr)
-    
+
     # Get the protocol steps
     steps = options["steps"]
 
@@ -270,9 +275,8 @@ def main():
         
         # Set the current PDB file to the PDB passed by the user
         # (after checking it)
-        curr_pdb_file = client.submit(util.check_pdb_file,
-                                      pdb_file = pdb_file,
-                                      **options["pdb"]).result()
+        curr_pdb_file = util.check_pdb_file(pdb_file = pdb_file,
+                                            **options["pdb"])
     
     # If something went wrong, report it and exit
     except Exception as e:
@@ -280,7 +284,7 @@ def main():
         errstr = f"Could not load the PDB file {pdb_file}: {e}"
         log.error(errstr)
         sys.exit(errstr)
-    
+
     # If the file with the list of mutations was passed
     if list_file:
         
@@ -302,14 +306,13 @@ def main():
         try:
             
             mutations, mutations_original = \
-                client.submit(\
-                    util.get_mutations,
-                        list_file = list_file,
-                        res_list_file = res_list_file,
-                        pdb_file = curr_pdb_file,
-                        res_numbering = mut_options["resnumbering"],
-                        extra = mut_options["extra"],
-                        n_struct = mut_options["nstruct"]).result()
+                util.get_mutations(\
+                    list_file = list_file,
+                    res_list_file = res_list_file,
+                    pdb_file = curr_pdb_file,
+                    res_numbering = mut_options["resnumbering"],
+                    extra = mut_options["extra"],
+                    n_struct = mut_options["nstruct"])
         
         # If something went wrong, report it and exit
         except Exception as e:
@@ -320,6 +323,12 @@ def main():
     
     # If no list of mutations was passed
     else:
+
+        # Inform the user that no mutations will be performed
+        logstr = \
+            "No list of mutations was passed. Therefore, no " \
+            "mutations will be performed."
+        log.info(logstr)
         
         # No mutations will be performed
         mutations, mutations_original = [], [] 
@@ -349,7 +358,7 @@ def main():
             # Clear the list of pending futures
             futures = []            
         
-        # Get the step options
+        # Try to Get the step options
         step_opts = step["options"]
 
         # Get the step features (hard-coded, they define what
@@ -364,9 +373,6 @@ def main():
 
             # Get the role of the step
             role = step_features["role"]
-
-            # Get the executable needed to run the step
-            executable = step_features["executable"]
 
             # Get the step working directory
             step_wd = step["wd"]
@@ -383,76 +389,39 @@ def main():
                 # Set a new directory
                 step_wd = os.path.join(run_dir, step_wd)
 
-            # Try to get the Rosetta executable
-            try:
-                
-                executable = \
-                    client.submit(util.get_rosetta_executable,
-                                  exec_name = executable,
-                                  exec_path = exec_path,
-                                  exec_suffix = exec_suffix)
-            
-            # If something went wrong, report it and exit
-            except Exception as e:
-                
-                errstr = f"Could not get Rosetta executable " \
-                         f"'{executable}' from {exec_path}."
-                log.error(errstr)
-                sys.exit(errstr)
 
             # If it is a processing step
             if role == "processing":
-                
-                # Get and update the step options
-                step_opts = client.submit(util.update_options,
-                                          options = step_opts,
-                                          pdb_file = curr_pdb_file)
-                
-                # Set the flags file and Rosetta output
-                flagsfile = os.path.join(step_wd, step["flagsfile"])
-                output = os.path.join(step_wd, step["output"])
-                
-                # Write the flagsfile
-                flagsfile = client.submit(util.write_flagsfile,
-                                          options = step_opts,
-                                          flagsfile = flagsfile)
-                
-                # Submit the calculation
-                # NB: all processes will be used as MPI processes
-                # if MPI is available, since there is no need for
-                # parallelization over the mutations (it is a
-                # processing step).
-                try:
-                    
-                    process = \
-                        client.submit(\
-                            util.run_rosetta,
-                            executable = executable,
-                            flagsfile = flagsfile,
-                            output = output,
-                            wd = step_wd,
-                            use_mpi = settings["mpi"]["usempi"],
-                            mpi_exec = settings["mpi"]["mpiexec"],
-                            mpi_args = settings["mpi"]["mpiargs"],
-                            mpi_n_proc = n_proc)
-               
-                # If something went wrong, report it and exit
-                except Exception as e:
-                    
-                    errstr = f"'{step_name}' run in {step_wd} exited " \
-                             f"with code {process['returncode']}. " \
-                             f"The following exception occurred: {e}"
-                    log.errstr(errstr)
-                    sys.exit(errstr)
 
-                # Submit also the post-run cleaning
-                futures.append(\
-                    client.submit(cleaning.clean_folders,
-                                  process = process,
-                                  step_name = step_name,
-                                  wd = step_wd,
-                                  options = step_opts,
-                                  level = clean_level))
+                # If it is a relax step
+                if step_name == "relax":
+                
+                    # Run the step
+                    process = \
+                        client.submit(util.run_relax,
+                                      step_features = step_features,
+                                      exec_path = exec_path,
+                                      exec_suffix = exec_suffix,
+                                      step_wd = step_wd,
+                                      step_opts = step_opts,
+                                      curr_pdb_file = curr_pdb_file,
+                                      settings = settings,
+                                      n_proc = n_proc)
+
+                    # Append the process to the list of futures so that
+                    # it gets gathered before the next step
+                    futures.append(process)
+
+                    # Submit also the post-run cleaning (we can fire and
+                    # forget about this one since no other task depends
+                    # on the cleaning)
+                    fire_and_forget(\
+                        client.submit(cleaning.clean_folders,
+                                      step_name = step_name,
+                                      wd = step_wd,
+                                      options = step_opts,
+                                      level = clean_level,
+                                      wait_on = [process]))
 
                 # Add the directory where the step was run to
                 # the list of directories
@@ -463,12 +432,10 @@ def main():
 
                 # Write out the file mapping the directory
                 # names to the mutations
-                futures.append(\
-                    client.submit(\
-                        util.write_mutinfo_file,
-                        mutations_original = mutations_original,
-                        out_dir = step_wd,
-                        mutinfo_file = mut_options["mutinfofile"]))
+                util.write_mutinfo_file(\
+                    mutations_original = mutations_original,
+                    out_dir = step_wd,
+                    mutinfo_file = mut_options["mutinfofile"])
 
                 # Log the order in which the mutations will be
                 # performed
@@ -486,334 +453,54 @@ def main():
                     # Set the path to the mutation directory
                     mut_wd = \
                         os.path.join(step_wd, mut_orig[MUT_DIR_PATH])              
-                    
-                    # Set the flags file and Rosetta output
-                    flagsfile = os.path.join(mut_wd, step["flagsfile"])
-                    output = os.path.join(mut_wd, step["output"])          
-
+                            
                     # If the step is cartesian ΔΔG calculation
                     if step_name == "cartesian":
                         
-                        # Get the keyword used to specify the mutfile
-                        # in the configuration file
-                        mutfile_key = \
-                            client.submit(util.get_option_key,
-                                          options = step_opts,
-                                          option = "mutfile").result()
-                        
-                        # Set the path to the mutfile that will be
-                        # written
-                        mutfile = \
-                            os.path.join(mut_wd, step_opts[mutfile_key])
-                        
-                        # Write the mutfile
-                        client.submit(util.write_mutfile,
-                                      mut = mut,
-                                      mutfile = mutfile).result()
-
-                        # Update the options for the current mutation
-                        # (add input PDB file and mutation-specific
-                        # options)
-                        opts_mut = \
-                            client.submit(util.update_options,
-                                          options = step_opts,
-                                          pdb_file = curr_pdb_file)
+                        # Run the step
+                        process = \
+                            client.submit(\
+                                util.run_cartesian,
+                                step_features = step_features,
+                                exec_path = exec_path,
+                                exec_suffix = exec_suffix,
+                                mut = mut,
+                                mut_wd = mut_wd,
+                                step = step,
+                                step_opts = step_opts,
+                                curr_pdb_file = curr_pdb_file,
+                                settings = settings)
 
                     # If the step is Flex ddG ΔΔG calculation
                     elif step_name == "flexddg":
-                        
-                        # Get the keyword used to specify the Rosetta
-                        # script variables in the configuration file
-                        script_vars_key = \
-                            client.submit(\
-                                util.get_option_key,
-                                options = step_opts,
-                                option = "script_vars").result()
-                        
-                        # Get the keyword used to specify the resfile
-                        # in the configuration file
-                        resfile_key = \
-                            client.submit(\
-                                util.get_option_key,
-                                options = step_opts[script_vars_key],
-                                option = "resfile").result()
-                        
-                        # Set the path to the resfile that will be
-                        # written
-                        resfile = \
-                            os.path.join(\
-                                mut_wd,
-                                step_opts[script_vars_key][resfile_key])
-                        
-                        # Write the resfile
-                        client.submit(util.write_resfile,
-                                      mut = mut,
-                                      resfile = resfile).result()
 
-                        # Update the options for the current mutation
-                        # (add input PDB file and mutation-specific
-                        # options)
-                        opts_mut = \
-                            client.submit(util.update_options,
-                                          options = step_opts,
-                                          pdb_file = curr_pdb_file,
-                                          mut = mut)                                
-
-                    # Write the flagsfile
-                    flagsfile = client.submit(util.write_flagsfile,
-                                              options = opts_mut,
-                                              flagsfile = flagsfile)
-
-                    # Submit the calculation
-                    # NB: only one MPI process will be used if MPI is
-                    # available since there is no gain in using MPI
-                    # with cartesian_ddg or the Flex ddG procedure.
-                    # The parallelization is done over the mutations.
-                    try:
-                        
+                        # Run the step
                         process = \
                             client.submit(\
-                                util.run_rosetta,
-                                executable = executable,
-                                flagsfile = flagsfile,
-                                output = output,
-                                wd = mut_wd,
-                                use_mpi = settings["mpi"]["usempi"],
-                                mpi_exec = settings["mpi"]["mpiexec"],
-                                mpi_args = settings["mpi"]["mpiargs"],
-                                mpi_n_proc = 1)
-                    
-                    # If something went wrong, report it and exit
-                    except Exception as e:
-                        
-                        errstr = \
-                            f"'{step_name}' run in {mut_wd} exited " \
-                            f"with code {process['returncode']}. " \
-                            f"The following exception occurred: {e}"
-                        
-                        # Log the error and exit
-                        log.errstr(errstr)
-                        sys.exit(errstr)
+                                util.run_flexddg,
+                                step_features = step_features,
+                                exec_path = exec_path,
+                                exec_suffix = exec_suffix,
+                                mut = mut,
+                                mut_wd = mut_wd,
+                                step = step,
+                                step_opts = step_opts,
+                                curr_pdb_file = curr_pdb_file,
+                                settings = settings)                   
 
-                    # If the step was a flexddg step
-                    if step_name == "flexddg":
-
-                        # Get the options regarding the extraction
-                        # of structures from the database file
-                        extract_options = step["extract_structures"]
-
-                        # The extraction of the structures is not
-                        # a 'step' per se because it needs to be
-                        # run in every folder where the flexddg
-                        # step was run and before the unnecessary
-                        # output files are deleted, since one
-                        # of these files is needed to extract
-                        # the structures
-
-                        # Get whether the user has requested the
-                        # extraction
-                        if extract_options["extract"]:
-
-                            # Check whether some steps of the extraction
-                            # have already been performed
-                            is_struct_extracted, is_struct_renamed = \
-                                client.submit(\
-                                    util.check_structures_extraction,
-                                    wd = mut_wd).result()
-
-                            # Get the RosettaScripts options specified
-                            # in the flexddg protocol
-                            r_script_options = \
-                                step_opts[script_vars_key]
-
-                            # Initialize the variable storing the
-                            # extraction process to None
-                            # (it is needed since it passed to the
-                            # rename function to be sure the renaming
-                            # occurs only after the extraction,
-                            # but it can happen that only the 
-                            # extraction has been performed but not
-                            # the renaming, and we want only the
-                            # renaming to be performed)
-                            process_extract = None
-
-                            # If the structures have not been
-                            # extracted yet
-                            if not is_struct_extracted:
-
-                                # Get the name of the Rosetta 
-                                # executable responsible
-                                # for the extraction
-                                exec_extract_name = \
-                                    step_features["executable_extract"]
-
-                                # Set the flags file
-                                flagsfile_extract = \
-                                    os.path.join(\
-                                        mut_wd,
-                                        extract_options["flagsfile"])
-
-                                # Set the Rosetta output
-                                output_extract = \
-                                    os.path.join(\
-                                        mut_wd,
-                                        extract_options["output"])
-
-                                # Try to get the Rosetta executable
-                                # The 'wait_on' option does not do
-                                # anything apart from telling Dask
-                                # that this task should only be
-                                # executed if the flexddg run
-                                # completed successfully
-                                try:
-                                    
-                                    executable_extract = \
-                                        client.submit(\
-                                            util.get_rosetta_executable,
-                                            exec_name = exec_extract_name,
-                                            exec_path = exec_path,
-                                            exec_suffix = exec_suffix,
-                                            wait_on = [process])
-
-                            
-                                # If something went wrong, report it
-                                except Exception as e:
-                                    
-                                    errstr = \
-                                        f"Could not get Rosetta " \
-                                        f"executable " \
-                                        f"'{exec_extract_name}' " \
-                                        f"from {exec_path}."
-                                    log.error(errstr)
-
-                                # Get the options to be passed to the
-                                # Rosetta executable
-                                opts_extract = \
-                                    extract_options["options"]
-
-                                # Get the key used to define the database
-                                # file containing the structures in the
-                                # configuration file
-                                # The 'wait_on' option does not do
-                                # anything apart from telling Dask
-                                # that this task should only be
-                                # executed if the flexddg run
-                                # completed successfully
-                                db_name_key = \
-                                    client.submit(\
-                                        util.get_option_key,
-                                        options = r_script_options,
-                                        option = "struct_db_file",
-                                        wait_on = [process]).result()
-
-                                # Get the path to the database file
-                                db_file = \
-                                    os.path.join(\
-                                        mut_wd,
-                                        r_script_options[db_name_key])
-
-                                # Get the key that will be used to define
-                                # the database file when given as input
-                                # for the extraction
-                                db_file_key = \
-                                    sorted(ROSETTA_OPTIONS["db_name"],
-                                           key = len,
-                                           reverse = True)[0]
-
-                                # Update the options with the database file
-                                opts_extract.update(\
-                                    {db_file_key : db_file})
-
-                                # Write the flagsfile
-                                # The 'wait_on' option does not do
-                                # anything apart from telling Dask
-                                # that this task should only be
-                                # executed if the flexddg run
-                                # completed successfully
-                                flagsfile_extract = \
-                                    client.submit(\
-                                        util.write_flagsfile,
-                                        options = opts_extract,
-                                        flagsfile = flagsfile_extract,
-                                        wait_on = [process])
-
-                                # Submit the extraction
-                                try:
-                                    
-                                    process_extract = \
-                                        client.submit(\
-                                            util.run_rosetta,
-                                            executable = executable_extract,
-                                            flagsfile = flagsfile_extract,
-                                            output = output_extract,
-                                            wd = mut_wd,
-                                            use_mpi = settings["mpi"]["usempi"],
-                                            mpi_exec = settings["mpi"]["mpiexec"],
-                                            mpi_args = settings["mpi"]["mpiargs"],
-                                            mpi_n_proc = 1)
-                                
-                                # If something went wrong, report it
-                                except Exception as e:
-                                    
-                                    errstr = \
-                                        f"The extraction of the " \
-                                        f"structures from the file " \
-                                        f"'{db_file}' in {mut_wd} " \
-                                        f"exited with code " \
-                                        f"{process['returncode']}. " \
-                                        f"The following exception " \
-                                        f"occurred: {e}"
-                                    
-                                    # Log the error
-                                    log.errstr(errstr)
-
-                                # Turn on the flag indicating that the
-                                # structures have now been extracted
-                                is_struct_extracted = True
-
-                            # If the structures have been extracted
-                            # but not renamed
-                            if (is_struct_extracted) and \
-                            (not is_struct_renamed):
-
-                                # Try to rename the structures
-                                # The 'wait_on' option does not do
-                                # anything apart from telling Dask
-                                # that this task should only be
-                                # executed if the extraction 
-                                # completed successfully
-                                try:
-                                        
-                                    process_rename = \
-                                        client.submit(\
-                                            util.rename_structures_flexddg,
-                                            path = mut_wd,
-                                            r_script_options = r_script_options,
-                                            wait_on = [process_extract])
-                                    
-                                # If something went wrong, report it
-                                except Exception as e:
-                                        
-                                    errstr = \
-                                        f"Could not rename the  " \
-                                        f"structures extracted from " \
-                                        f"the file '{db_file}' in " \
-                                        f"{mut_wd}." \
-                                        f"The following exception " \
-                                        f"occurred: {e}"
-                                        
-                                    # Log the error
-                                    log.errstr(errstr)
-
+                    # Append the process to the list of futures so that
+                    # it gets gathered before the next step
+                    futures.append(process)
 
                     # Submit also the post-run cleaning
-                    futures.append(\
+                    fire_and_forget(\
                         client.submit(cleaning.clean_folders,
-                                      process = process,
                                       step_name = step_name,
                                       wd = mut_wd,
-                                      options = opts_mut,
-                                      level = clean_level))
+                                      options = step_opts,
+                                      level = clean_level,
+                                      wait_on = [process]))
+
 
         # If the step is run by Python
         elif step_features["run_by"] == "python":
@@ -821,67 +508,20 @@ def main():
             # If the step is structure selection
             if step_name == "structure_selection":
 
-                # Get the input file, the file type and the
-                # selection criterion
-                in_file, in_file_type, select = \
-                    step_opts["infile"], step_opts["infiletype"], \
-                    step_opts["select"]
-
-                # Get the path to the input file (assuming the
-                # input file is specified as either a file name
-                # or a relative path starting from the working
-                # directory)
-                in_file = os.path.join(run_dir, in_file)
-                
-                # Try to select the structure
-                try:
-                    
-                    # Run the selection
-                    struct = \
-                        client.submit(pythonsteps.select_structure,
-                                      in_file = in_file,
-                                      in_file_type = in_file_type,
-                                      select = select)
-                
-                # If something went wrong, report it and exit
-                except Exception as e:
-                    
-                    errstr = f"Could not not perform the " \
-                             f"structure selection: {e}"
-                    log.error(errstr)
-                    sys.exit(errstr)
-                
-                # Get the name of the current PDB file
-                pdb_file = os.path.basename(curr_pdb_file)
-
-                # Try to get the name of the selected PDB file by
-                # using the options from the previous (Rosetta) step
-                # to retrieve the correct PDB file
-                try:
-                    
-                    curr_pdb_file_name = \
-                        client.submit(util.get_out_pdb_name,
-                                      options = prev_opts,
-                                      pdb_file = pdb_file, 
-                                      struct = struct).result()
-                
-                # If something went wrong, report the error and exit
-                except Exception as e:
-                    
-                    errstr = f"Could not get the name of the PDB " \
-                             f"of the selected structure: {e}"
-                    log.error(errstr)
-                    sys.exit(errstr)
-
-                # Get the path to the PDB file
+                # Run the step and return the path to the PDB
+                # file to be used in the next step
                 curr_pdb_file = \
-                    os.path.join(prev_wd, curr_pdb_file_name)
+                    run_structure_selection(step_opts = step_opts,
+                                            curr_pdb_file = curr_pdb_file,
+                                            prev_opts = prev_opts)
+
 
         # Store the previous step options
         prev_opts = step_opts
 
         # Store the previous step working directory
         prev_wd = step_wd
+
 
     # Gather the futures pending after running all steps
     client.gather(futures)
