@@ -402,6 +402,7 @@ def main():
                                       step_features = step_features,
                                       exec_path = exec_path,
                                       exec_suffix = exec_suffix,
+                                      step = step,
                                       step_wd = step_wd,
                                       step_opts = step_opts,
                                       curr_pdb_file = curr_pdb_file,
