@@ -394,7 +394,7 @@ def main():
             if role == "processing":
 
                 # If it is a relax step
-                if step_name == "relax":
+                if step_name in ("relax", "relax2020"):
                 
                     # Run the step
                     process = \
@@ -456,7 +456,7 @@ def main():
                         os.path.join(step_wd, mut_orig[MUT_DIR_PATH])              
                             
                     # If the step is cartesian ΔΔG calculation
-                    if step_name == "cartesian":
+                    if step_name in ("cartesian", "cartesian2020"):
                         
                         # Run the step
                         process = \
