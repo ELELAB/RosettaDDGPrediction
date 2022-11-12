@@ -1,3 +1,6 @@
+Cancer Structural Biology, Danish Cancer Society Research Center, 2100, Copenhagen, Denmark
+Cancer Systems Biology, Health and Technology Department, Section for Bioinformatics, 2800, Lyngby, Denmark
+
 # RosettaDDGPrediction
 
 **Rosetta version**: 3.12 and 2022.11
