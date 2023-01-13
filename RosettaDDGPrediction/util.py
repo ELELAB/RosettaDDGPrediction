@@ -71,6 +71,7 @@ from .defaults import (
     STRUCT_EXTRACTED_PATTERN,
     WTR
 )
+from . import pythonsteps
 
 
 # Get the module logger
@@ -1826,7 +1827,9 @@ def run_relax(step_features,
 
 def run_structure_selection(step_opts,
                             curr_pdb_file,
-                            prev_opts):
+                            prev_opts,
+                            prev_wd,
+                            run_dir):
     """Prepare the input files and run the 'structure_selection' step.
     """  
 
@@ -1858,7 +1861,7 @@ def run_structure_selection(step_opts,
                          struct = struct)
                 
     # Return the path to the PDB file
-    curr_pdb_file = os.path.join(prev_wd, curr_pdb_file_name)
+    return os.path.join(prev_wd, curr_pdb_file_name)
 
 
 def run_cartesian(step_features,

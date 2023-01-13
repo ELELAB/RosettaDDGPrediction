@@ -342,10 +342,6 @@ def main():
     # Create an empty list to keep track of the running futures
     futures = []
 
-    # Create an empty list to keep track of all the directories
-    # where the previous step was run
-    prev_rundirs = []
-
     # For each step of the protocol that has to be run
     for step_name, step in steps.items():
 
@@ -424,9 +420,6 @@ def main():
                                       level = clean_level,
                                       wait_on = [process]))
 
-                # Add the directory where the step was run to
-                # the list of directories
-                prev_rundirs.append(step_wd)
 
             # If it is a ΔΔG prediction step
             elif role == "ddg":
@@ -512,9 +505,11 @@ def main():
                 # Run the step and return the path to the PDB
                 # file to be used in the next step
                 curr_pdb_file = \
-                    run_structure_selection(step_opts = step_opts,
-                                            curr_pdb_file = curr_pdb_file,
-                                            prev_opts = prev_opts)
+                    util.run_structure_selection(step_opts = step_opts,
+                                                 curr_pdb_file = curr_pdb_file,
+                                                 prev_opts = prev_opts,
+                                                 prev_wd = prev_wd,
+                                                 run_dir = run_dir)
 
 
         # Store the previous step options
