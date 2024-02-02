@@ -382,6 +382,15 @@ def generate_output_dataframes(dg_wt,
          state_col, scf_name_col]
     
 
+    #
+    # In some cases, 'struct_num_col' is parsed as string instead of integer.
+    # So, this line was added to force the conversion of values to integer.
+    #
+    # Added by @alexandrefassio to fix issue #62.
+    #
+    struct_df[struct_num_col] = struct_df[struct_num_col].astype('int64')
+
+
     # If the protocol is the updated version of the cartddg protocol
     if family == "cartddg2020":
 
