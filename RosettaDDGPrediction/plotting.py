@@ -450,7 +450,7 @@ def set_axis(ax,
                            **ticklabels_config)
         
         # If tick positions were provided
-        if ticks != []:      
+        if len(ticks) > 0:      
             
             # Set the axis boundaries
             ax.spines["bottom"].set_bounds(ticks[0],
@@ -473,7 +473,7 @@ def set_axis(ax,
                            **ticklabels_config)
         
         # If tick positions were provided
-        if ticks != []:       
+        if len(ticks) > 0:       
             
             # Set the axis boundaries
             ax.spines["left"].set_bounds(ticks[0],
