@@ -35,6 +35,7 @@ import argparse
 import logging as log
 import os
 import os.path
+from pathlib import Path
 import sys
 # Third-party packages
 import dask
@@ -44,6 +45,10 @@ from distributed import (
     LocalCluster
 )
 import yaml
+
+import hashlib
+import json
+
 # RosettaDDGProtocols
 from . import cleaning
 from .defaults import (
@@ -446,8 +451,26 @@ def main():
 
                     # Set the path to the mutation directory
                     mut_wd = \
-                        os.path.join(step_wd, mut_orig[MUT_DIR_PATH])              
-                            
+                        os.path.join(step_wd, mut_orig[MUT_DIR_PATH])
+                    original_dir = mut_wd
+                    log.info("The mutation string as the direcoty will be converted to a hash")
+                    log.info("The original mutation string is: %s", mut_orig[MUT_DIR_PATH])
+
+                    mut_wd_hash = hashlib.sha256(mut_orig[MUT_DIR_PATH].encode())
+                    hex_dig = mut_wd_hash.hexdigest()  # Use the hash as the filename
+                    log.info("The hex digested hash is: %s", hex_dig)
+
+                    # Use the hash as the mut_wd
+                    mut_wd = os.path.join(step_wd, hex_dig)
+                    hash_dict = {original_dir: mut_wd}
+
+                    # Create the new directory with the hash as the name
+                    Path(mut_wd).mkdir(parents=True, exist_ok=True)
+
+                    with open(f"{mut_wd}/test_writing_mut_wd_to_file.json", 'w') as f:
+                        log.info("Writing original mutation string and hash to file")                        
+                        json.dump(hash_dict, f, indent=4)
+
                     # If the step is cartesian ΔΔG calculation
                     if step_name in ("cartesian", "cartesian2020"):
                         
